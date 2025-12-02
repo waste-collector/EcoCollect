@@ -1,0 +1,89 @@
+"use client"
+
+import type React from "react"
+
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Leaf, LogOut, Menu, Truck, AlertCircle, BarChart3 } from "lucide-react"
+import { useState } from "react"
+
+export default function AgentLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside
+        className={`${sidebarOpen ? "block" : "hidden"} md:block w-64 bg-card border-r border-border p-6 space-y-6 overflow-y-auto`}
+      >
+        <div className="flex items-center gap-2">
+          <Leaf className="w-6 h-6 text-primary" />
+          <span className="font-bold text-primary text-lg">EcoCollect</span>
+        </div>
+
+        <nav className="space-y-2">
+          <Link
+            href="/agent/dashboard"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Dashboard
+          </Link>
+          <Link
+            href="/agent/tours"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
+          >
+            <Truck className="w-4 h-4" />
+            My Tours
+          </Link>
+          <Link
+            href="/agent/incidents"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
+          >
+            <AlertCircle className="w-4 h-4" />
+            Incidents
+          </Link>
+          <Link
+            href="/agent/profile"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Profile
+          </Link>
+        </nav>
+
+        <div className="border-t border-border pt-6 space-y-2">
+          <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
+            <Link href="/">
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Link>
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Navigation */}
+        <header className="md:hidden bg-card border-b border-border p-4 flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Menu className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <Leaf className="w-6 h-6 text-primary" />
+            <span className="font-bold text-primary">EcoCollect</span>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">{children}</main>
+      </div>
+    </div>
+  )
+}
+
+import { Users } from "lucide-react"

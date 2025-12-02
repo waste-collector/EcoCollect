@@ -1,0 +1,83 @@
+"use client"
+
+import type React from "react"
+
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Leaf, LogOut, Menu } from "lucide-react"
+import { useState } from "react"
+
+export default function CitizenLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside
+        className={`${sidebarOpen ? "block" : "hidden"} md:block w-64 bg-card border-r border-border p-6 space-y-6`}
+      >
+        <div className="flex items-center gap-2">
+          <Leaf className="w-6 h-6 text-primary" />
+          <span className="font-bold text-primary text-lg">EcoCollect</span>
+        </div>
+
+        <nav className="space-y-2">
+          <Link
+            href="/citizen/dashboard"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/citizen/schedules"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition"
+          >
+            Collection Schedules
+          </Link>
+          <Link
+            href="/citizen/reports"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition"
+          >
+            My Reports
+          </Link>
+          <Link
+            href="/citizen/profile"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition"
+          >
+            Profile
+          </Link>
+        </nav>
+
+        <div className="border-t border-border pt-6 space-y-2">
+          <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
+            <Link href="/">
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Link>
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Navigation */}
+        <header className="md:hidden bg-card border-b border-border p-4 flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Menu className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <Leaf className="w-6 h-6 text-primary" />
+            <span className="font-bold text-primary">EcoCollect</span>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">{children}</main>
+      </div>
+    </div>
+  )
+}
