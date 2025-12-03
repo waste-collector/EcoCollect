@@ -199,8 +199,6 @@ export function AddCollectionPointDialog({ onSuccess }: AddCollectionPointDialog
           ) : (
             <CollectionPointMapPicker
               onLocationSelect={handleLocationSelect}
-              initialLat={formData.latitude}
-              initialLng={formData.longitude}
             />
           )}
         </form>

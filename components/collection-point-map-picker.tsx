@@ -1,10 +1,4 @@
-"use client"
-
-import type React from "react"
-
-import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import React, { useState, useEffect, useRef } from "react"
 
 interface MapPickerProps {
   onLocationSelect: (lat: number, lng: number) => void
@@ -14,105 +8,339 @@ interface MapPickerProps {
 
 export function CollectionPointMapPicker({
   onLocationSelect,
-  initialLat = 40.7128,
-  initialLng = -74.006,
+  initialLat = 34.7406,
+  initialLng = 10.7603,
 }: MapPickerProps) {
-  const [lat, setLat] = useState(initialLat)
-  const [lng, setLng] = useState(initialLng)
-  const [selectedLat, setSelectedLat] = useState(lat)
-  const [selectedLng, setSelectedLng] = useState(lng)
+  const [selectedLat, setSelectedLat] = useState(initialLat)
+  const [selectedLng, setSelectedLng] = useState(initialLng)
+  const [confirmedLat, setConfirmedLat] = useState(initialLat)
+  const [confirmedLng, setConfirmedLng] = useState(initialLng)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  // Handle map click - simple grid-based approximation
-  const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    // Convert pixel position to lat/lng (normalized grid)
-    const newLat = 40.7 + (y / rect.height - 0.5) * 0.1
-    const newLng = -74.0 + (x / rect.width - 0.5) * 0.1
-
-    setSelectedLat(Number(newLat.toFixed(4)))
-    setSelectedLng(Number(newLng.toFixed(4)))
-  }
+  // Update iframe when coordinates change
+  useEffect(() => {
+    if (iframeRef.current) {
+      const bbox = `${selectedLng - 0.01},${selectedLat - 0.01},${selectedLng + 0.01},${selectedLat + 0.01}`
+      iframeRef.current.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${selectedLat},${selectedLng}`
+    }
+  }, [selectedLat, selectedLng])
 
   const handleConfirm = () => {
-    setLat(selectedLat)
-    setLng(selectedLng)
+    setConfirmedLat(selectedLat)
+    setConfirmedLng(selectedLng)
     onLocationSelect(selectedLat, selectedLng)
   }
 
   return (
-    <div className="space-y-4">
-      {/* Map Display */}
-      <Card className="border-2 border-primary/20 overflow-hidden">
-        <div
-          onClick={handleMapClick}
-          className="w-full h-64 bg-gradient-to-br from-blue-50 to-blue-100 relative cursor-crosshair flex items-center justify-center"
-        >
-          {/* Grid background */}
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{
-              backgroundImage:
-                "linear-gradient(0deg, transparent 24%, rgba(0,0,0,.05) 25%, rgba(0,0,0,.05) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.05) 75%, rgba(0,0,0,.05) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(0,0,0,.05) 25%, rgba(0,0,0,.05) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.05) 75%, rgba(0,0,0,.05) 76%, transparent 77%, transparent)",
-              backgroundSize: "50px 50px",
-            }}
-          />
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+        Select Collection Point
+      </h2>
+      <p style={{ fontSize: '15px', color: '#64748b', marginBottom: '24px' }}>
+        📍 Sfax, Tunisia
+      </p>
 
-          {/* Current selection marker */}
-          <div
-            className="absolute w-6 h-6 bg-red-500 rounded-full border-4 border-white shadow-lg pointer-events-none transform -translate-x-3 -translate-y-3"
-            style={{
-              left: `${((selectedLng - (-74.0 - 0.05)) / 0.1) * 100}%`,
-              top: `${((40.7 + 0.05 - selectedLat) / 0.1) * 100}%`,
-            }}
-          />
-
-          <p className="text-sm text-foreground/50 relative z-10">Click to select location</p>
-        </div>
-      </Card>
-
-      {/* Coordinate Input */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-sm font-medium text-foreground">Latitude</label>
-          <input
-            type="number"
-            step="0.0001"
-            value={selectedLat}
-            onChange={(e) => setSelectedLat(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-foreground">Longitude</label>
-          <input
-            type="number"
-            step="0.0001"
-            value={selectedLng}
-            onChange={(e) => setSelectedLng(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+      {/* OpenStreetMap with marker */}
+      <div style={{ 
+        border: '3px solid #cbd5e1', 
+        borderRadius: '16px', 
+        overflow: 'hidden',
+        marginBottom: '24px',
+        boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)'
+      }}>
+        <iframe
+          ref={iframeRef}
+          width="100%"
+          height="500"
+          frameBorder="0"
+          scrolling="no"
+          marginHeight={0}
+          marginWidth={0}
+          src={`https://www.openstreetmap.org/export/embed.html?bbox=${selectedLng - 0.01},${selectedLat - 0.01},${selectedLng + 0.01},${selectedLat + 0.01}&layer=mapnik&marker=${selectedLat},${selectedLng}`}
+          style={{ border: 'none' }}
+        />
+        <div style={{
+          padding: '12px 16px',
+          background: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
+          fontSize: '13px',
+          color: '#64748b',
+          textAlign: 'center'
+        }}>
+          <a 
+            href={`https://www.openstreetmap.org/?mlat=${selectedLat}&mlon=${selectedLng}#map=15/${selectedLat}/${selectedLng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: '500' }}
+          >
+            View Larger Map
+          </a>
         </div>
       </div>
 
-      {/* Confirm Button */}
-      <Button onClick={handleConfirm} className="w-full">
-        Confirm Location
-      </Button>
+      {/* Manual Coordinate Input */}
+      <div style={{
+        background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)',
+        border: '2px solid #e2e8f0',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', marginBottom: '16px' }}>
+          Adjust Coordinates
+        </h3>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr', 
+          gap: '16px',
+          marginBottom: '20px'
+        }}>
+          <div>
+            <label style={{ 
+              fontSize: '13px', 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '8px',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              Latitude
+            </label>
+            <input
+              type="number"
+              step="0.0001"
+              value={selectedLat}
+              onChange={(e) => setSelectedLat(Number(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: '2px solid #cbd5e1',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontFamily: 'monospace',
+                fontWeight: '600',
+                color: '#1e293b',
+                transition: 'all 0.2s',
+                backgroundColor: 'white'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+            />
+          </div>
+          <div>
+            <label style={{ 
+              fontSize: '13px', 
+              fontWeight: '600', 
+              display: 'block', 
+              marginBottom: '8px',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              Longitude
+            </label>
+            <input
+              type="number"
+              step="0.0001"
+              value={selectedLng}
+              onChange={(e) => setSelectedLng(Number(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: '2px solid #cbd5e1',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontFamily: 'monospace',
+                fontWeight: '600',
+                color: '#1e293b',
+                transition: 'all 0.2s',
+                backgroundColor: 'white'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+            />
+          </div>
+        </div>
 
-      {/* Current Selection Display */}
-      <div className="text-sm text-foreground/70 p-3 bg-muted rounded-md">
-        <p>
-          Selected: {selectedLat.toFixed(4)}, {selectedLng.toFixed(4)}
-        </p>
-        {lat !== selectedLat || lng !== selectedLng ? (
-          <p className="text-yellow-600 font-medium">Click Confirm Location to apply changes</p>
+        {/* Quick location buttons */}
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{ fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Quick Locations
+          </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                setSelectedLat(34.7406)
+                setSelectedLng(10.7603)
+              }}
+              style={{
+                padding: '8px 16px',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#e2e8f0'
+                e.currentTarget.style.borderColor = '#94a3b8'
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#f1f5f9'
+                e.currentTarget.style.borderColor = '#cbd5e1'
+              }}
+            >
+              📍 Sfax Center
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLat(34.7298)
+                setSelectedLng(10.7595)
+              }}
+              style={{
+                padding: '8px 16px',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#e2e8f0'
+                e.currentTarget.style.borderColor = '#94a3b8'
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#f1f5f9'
+                e.currentTarget.style.borderColor = '#cbd5e1'
+              }}
+            >
+              🏛️ Medina
+            </button>
+            <button
+              onClick={() => {
+                setSelectedLat(34.7456)
+                setSelectedLng(10.7625)
+              }}
+              style={{
+                padding: '8px 16px',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#e2e8f0'
+                e.currentTarget.style.borderColor = '#94a3b8'
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#f1f5f9'
+                e.currentTarget.style.borderColor = '#cbd5e1'
+              }}
+            >
+              🏢 Downtown
+            </button>
+          </div>
+        </div>
+
+        {/* Confirm Button */}
+        <button
+          onClick={handleConfirm}
+          style={{
+            width: '100%',
+            padding: '16px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '10px',
+            fontSize: '17px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 6px -1px rgb(59 130 246 / 0.5)'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#2563eb'
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 8px 12px -1px rgb(59 130 246 / 0.5)'
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = '#3b82f6'
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgb(59 130 246 / 0.5)'
+          }}
+        >
+          ✓ Confirm Location
+        </button>
+      </div>
+
+      {/* Status Display */}
+      <div style={{
+        padding: '20px',
+        background: confirmedLat === selectedLat && confirmedLng === selectedLng ? 
+          'linear-gradient(to bottom right, #f0fdf4, #dcfce7)' : 
+          'linear-gradient(to bottom right, #fef3c7, #fde68a)',
+        borderRadius: '12px',
+        border: `3px solid ${confirmedLat === selectedLat && confirmedLng === selectedLng ? '#86efac' : '#fcd34d'}`,
+        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: confirmedLat === selectedLat && confirmedLng === selectedLng ? '#22c55e' : '#f59e0b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px'
+          }}>
+            {confirmedLat === selectedLat && confirmedLng === selectedLng ? '✓' : '⚠️'}
+          </div>
+          <div>
+            <p style={{ 
+              fontSize: '13px', 
+              color: '#475569', 
+              margin: 0,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              Current Selection
+            </p>
+            <p style={{ 
+              fontSize: '20px', 
+              color: '#1e293b',
+              fontFamily: 'monospace',
+              fontWeight: '700',
+              margin: '4px 0 0 0'
+            }}>
+              {selectedLat.toFixed(6)}, {selectedLng.toFixed(6)}
+            </p>
+          </div>
+        </div>
+        {confirmedLat !== selectedLat || confirmedLng !== selectedLng ? (
+          <p style={{ fontSize: '14px', color: '#92400e', margin: 0, fontWeight: '600' }}>
+            ⚠️ Click "Confirm Location" to save your changes
+          </p>
         ) : (
-          <p className="text-green-600 font-medium">Location confirmed</p>
+          <p style={{ fontSize: '14px', color: '#166534', margin: 0, fontWeight: '600' }}>
+            ✓ Location has been confirmed and saved
+          </p>
         )}
       </div>
     </div>
   )
 }
+
+export default CollectionPointMapPicker
