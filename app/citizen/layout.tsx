@@ -21,7 +21,7 @@ export default function CitizenLayout({
         className={`${sidebarOpen ? "block" : "hidden"} md:block w-64 bg-card border-r border-border p-6 space-y-6`}
       >
         <div className="flex items-center gap-2">
-          <Leaf className="w-6 h-6 text-primary" />
+          <img src="/favicon-32x32.png" alt="logo" className="w-6 h-6 text-primary" />
           <span className="font-bold text-primary text-lg">EcoCollect</span>
         </div>
 
@@ -70,7 +70,7 @@ export default function CitizenLayout({
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Leaf className="w-6 h-6 text-primary" />
+            <img src="/favicon-32x32.png" alt="logo" className="w-6 h-6 text-primary" />
             <span className="font-bold text-primary">EcoCollect</span>
           </div>
         </header>

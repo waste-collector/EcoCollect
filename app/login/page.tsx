@@ -39,13 +39,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 p-6">
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center space-y-2">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-primary/10 rounded-lg">
-              <Leaf className="w-8 h-8 text-primary" />
+              <img src="logoEcoCollect1-removebg.png" alt="logo" className="w-8 h-8 text-primary" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">EcoCollect</h1>
