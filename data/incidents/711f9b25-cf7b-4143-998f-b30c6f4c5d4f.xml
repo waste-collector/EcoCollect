@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<IncidentReport>
+  <idIR>711f9b25-cf7b-4143-998f-b30c6f4c5d4f</idIR>
+  <typeIR>vehicle-issue</typeIR>
+  <descIR>engine broke</descIR>
+  <adressIR>sfax hay l'ons</adressIR>
+  <dateIR>2025-12-11T19:23:46.582Z</dateIR>
+  <stateIR>open</stateIR>
+</IncidentReport>

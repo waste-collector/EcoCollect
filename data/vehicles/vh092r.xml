@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Vehicule>
-  <immatV>ABC-123</immatV>
-  <typeV>Compactor Truck</typeV>
-  <capacityV>25000</capacityV>
+  <immatV>vh092r</immatV>
+  <typeV>Truck</typeV>
+  <capacityV>5000</capacityV>
   <stateV>operational</stateV>
-  <fuelLevelV>85</fuelLevelV>
+  <fuelLevelV>100</fuelLevelV>
   <typeFuelV>Diesel</typeFuelV>
-  <emissionCO2>2.4</emissionCO2>
+  <emissionCO2>0</emissionCO2>
   <dateLastMaintenance>2025-12-11</dateLastMaintenance>
 </Vehicule>

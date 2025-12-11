@@ -106,6 +106,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Also create a user record so the agent can log in
+    const userXmlContent = XMLConverter.userToXML({
+      idUser: id,
+      emailU: body.emailU || body.email,
+      nameU: body.nameU || body.name,
+      pwdU: body.pwdU || body.password || "",
+      role: "agent",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
+
+    const userResult = await XMLStorage.save("users", id, userXmlContent, "User")
+    if (!userResult.success) {
+      // Rollback: delete the agent if user creation fails
+      await XMLStorage.delete(RESOURCE_NAME, id)
+      return NextResponse.json(
+        { success: false, error: `Failed to create user record: ${userResult.error}` },
+        { status: 400 }
+      )
+    }
+
     // Parse back to JSON for response
     const jsonData = await XMLValidator.parseXMLToJSON(xmlContent)
 
@@ -163,6 +184,20 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Also update the user record if it exists
+    const userExists = await XMLStorage.exists("users", id)
+    if (userExists) {
+      const userXmlContent = XMLConverter.userToXML({
+        idUser: id,
+        emailU: body.emailU || body.email,
+        nameU: body.nameU || body.name,
+        pwdU: body.pwdU || body.password || "",
+        role: "agent",
+        updatedAt: new Date().toISOString()
+      })
+      await XMLStorage.update("users", id, userXmlContent, "User")
+    }
+
     // Parse back to JSON for response
     const jsonData = await XMLValidator.parseXMLToJSON(xmlContent)
 
@@ -202,6 +237,12 @@ export async function DELETE(request: NextRequest) {
         { success: false, error: result.error },
         { status: 404 }
       )
+    }
+
+    // Also delete the corresponding user record if it exists
+    const userExists = await XMLStorage.exists("users", id)
+    if (userExists) {
+      await XMLStorage.delete("users", id)
     }
 
     return NextResponse.json({

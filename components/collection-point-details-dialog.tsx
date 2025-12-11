@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { StatusBadge } from "./status-badge"
 import { MapPin, Droplet, Box } from "lucide-react"
+import { toFixed } from "@/lib/utils";
 
 interface CollectionPoint {
     id: number
@@ -69,7 +70,7 @@ export function CollectionPointDetailsDialog({ point }: CollectionPointDetailsDi
                                 <h3 className="font-semibold text-sm text-foreground mb-1">Location</h3>
                                 <p className="text-sm text-foreground/70">{point.zone}</p>
                                 <p className="text-xs text-foreground/50 font-mono">
-                                    {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
+                                    {toFixed(point.latitude, 4)}, {toFixed(point.longitude, 4)}
                                 </p>
                             </div>
                         </div>

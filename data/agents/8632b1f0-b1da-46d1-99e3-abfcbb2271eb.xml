@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectAgent>
+  <idUser>8632b1f0-b1da-46d1-99e3-abfcbb2271eb</idUser>
+  <emailU>testdriver@test.test</emailU>
+  <nameU>testdriver</nameU>
+  <pwdU>testtest</pwdU>
+  <role>agent</role>
+  <recruitmentDateEmp>2025-12-11</recruitmentDateEmp>
+  <salaryEmp>0</salaryEmp>
+  <telEmp>testtest</telEmp>
+  <disponibility>true</disponibility>
+  <roleAgent>driver</roleAgent>
+</CollectAgent>
