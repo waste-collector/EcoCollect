@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectPoint>
+  <idCP>3e8a6bba-da55-4c7e-912f-8929d5091c7c</idCP>
+  <nameCP>Downtown Collection</nameCP>
+  <adressCP>123 Main St</adressCP>
+  <latitudeGPS>40.7128</latitudeGPS>
+  <longitudeGPS>-74.006</longitudeGPS>
+  <capacityCP>100</capacityCP>
+  <fillLevel>75</fillLevel>
+  <wasteType>plastic</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-11</lastCollectDate>
+</CollectPoint>

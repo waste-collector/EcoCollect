@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectAgent>
+  <idUser>d82c16bb-d9eb-4c37-8c84-81ca5388fdee</idUser>
+  <emailU>john@example.com</emailU>
+  <nameU>John Doe</nameU>
+  <pwdU>test123</pwdU>
+  <role>agent</role>
+  <recruitmentDateEmp>2024-01-15</recruitmentDateEmp>
+  <salaryEmp>35000</salaryEmp>
+  <telEmp>+1234567890</telEmp>
+  <disponibility>true</disponibility>
+  <roleAgent>collector</roleAgent>
+</CollectAgent>

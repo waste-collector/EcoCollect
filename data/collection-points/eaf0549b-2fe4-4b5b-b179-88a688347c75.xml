@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectPoint>
+  <idCP>eaf0549b-2fe4-4b5b-b179-88a688347c75</idCP>
+  <nameCP>Test</nameCP>
+  <adressCP>123</adressCP>
+  <latitudeGPS>40.7</latitudeGPS>
+  <longitudeGPS>-74</longitudeGPS>
+  <capacityCP>100</capacityCP>
+  <fillLevel>50</fillLevel>
+  <wasteType>plastic</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-11</lastCollectDate>
+</CollectPoint>
