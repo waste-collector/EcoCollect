@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<IncidentReport>
+  <idIR>c57f82e6-3bf5-4eaf-961e-88b3ab90eb5a</idIR>
+  <typeIR>container-problem</typeIR>
+  <descIR>issence ofa</descIR>
+  <adressIR>Residential Area B</adressIR>
+  <dateIR>2025-12-11T19:29:28.965Z</dateIR>
+  <stateIR>open</stateIR>
+  <idcitizen>user_d75cc2c4bff4</idcitizen>
+</IncidentReport>
