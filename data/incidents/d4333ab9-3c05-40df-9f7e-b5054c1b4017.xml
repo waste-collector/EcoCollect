@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<IncidentReport>
-  <idIR>d4333ab9-3c05-40df-9f7e-b5054c1b4017</idIR>
-  <typeIR>vehicle-issue</typeIR>
-  <descIR>testing</descIR>
-  <adressIR>route afrane km 3</adressIR>
-  <dateIR>2025-12-11T19:33:21.434Z</dateIR>
-  <stateIR>open</stateIR>
-</IncidentReport>

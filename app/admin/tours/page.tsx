@@ -430,7 +430,7 @@ export default function ToursPage() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-foreground">
-                        Tour {tour.idTour}
+                        Tour {tour.immatV}
                       </h3>
                       <span className="text-xs bg-muted px-2 py-1 rounded">{tour.dateTour}</span>
                     </div>
