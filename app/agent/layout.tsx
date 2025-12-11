@@ -47,13 +47,6 @@ export default function AgentLayout({
             <AlertCircle className="w-4 h-4" />
             Incidents
           </Link>
-          <Link
-            href="/agent/profile"
-            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Profile
-          </Link>
         </nav>
 
         <div className="border-t border-border pt-6 space-y-2">

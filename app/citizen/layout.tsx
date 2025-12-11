@@ -44,12 +44,6 @@ export default function CitizenLayout({
           >
             My Reports
           </Link>
-          <Link
-            href="/citizen/profile"
-            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition"
-          >
-            Profile
-          </Link>
         </nav>
 
         <div className="border-t border-border pt-6 space-y-2">
