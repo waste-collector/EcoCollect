@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   PieChart,
@@ -15,7 +16,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
+import { fetchStats, fetchIncidents, fetchCollectionPoints, fetchVehicles } from "@/lib/api-client"
 
 const emissionData = [
   { month: "Jan", emissions: 1200 },
@@ -33,13 +35,123 @@ const wasteTypeData = [
   { name: "Hazardous", value: 5, fill: "#f59e0b" },
 ]
 
-const tourPerformance = [
-  { status: "Completed", value: 285 },
-  { status: "In Progress", value: 42 },
-  { status: "Pending", value: 18 },
-]
+interface Stats {
+  totalTours: number
+  completedTours: number
+  pendingTours: number
+  inProgressTours: number
+  totalVehicles: number
+  operationalVehicles: number
+  maintenanceVehicles: number
+  totalCollectionPoints: number
+  criticalPoints: number
+  totalAgents: number
+  availableAgents: number
+  totalIncidents: number
+  openIncidents: number
+  resolvedIncidents: number
+  co2Saved: number
+}
+
+interface Alert {
+  type: "critical" | "warning" | "notice"
+  title: string
+  description: string
+}
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [tourPerformance, setTourPerformance] = useState([
+    { status: "Completed", value: 0 },
+    { status: "In Progress", value: 0 },
+    { status: "Pending", value: 0 },
+  ])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        const [statsRes, incidentsRes, pointsRes, vehiclesRes] = await Promise.all([
+          fetchStats(),
+          fetchIncidents(),
+          fetchCollectionPoints(),
+          fetchVehicles()
+        ])
+
+        if (statsRes.success && statsRes.data) {
+          setStats(statsRes.data)
+          setTourPerformance([
+            { status: "Completed", value: statsRes.data.completedTours },
+            { status: "In Progress", value: statsRes.data.inProgressTours },
+            { status: "Pending", value: statsRes.data.pendingTours },
+          ])
+        }
+
+        // Generate alerts based on real data
+        const newAlerts: Alert[] = []
+        
+        // Check for critical collection points (fill level >= 80%)
+        const points = pointsRes.data || []
+        const criticalPoints = points.filter((p: any) => (p.fillLevel || 0) >= 80)
+        if (criticalPoints.length > 0) {
+          newAlerts.push({
+            type: "critical",
+            title: `Critical: ${criticalPoints.length} overflowing container${criticalPoints.length > 1 ? 's' : ''}`,
+            description: "Immediate collection needed"
+          })
+        }
+
+        // Check for vehicles needing maintenance
+        const vehicles = vehiclesRes.data || []
+        const maintenanceVehicles = vehicles.filter((v: any) => v.state === "maintenance" || v.stateV === "maintenance")
+        if (maintenanceVehicles.length > 0) {
+          newAlerts.push({
+            type: "warning",
+            title: `Warning: ${maintenanceVehicles.length} vehicle${maintenanceVehicles.length > 1 ? 's' : ''} in maintenance`,
+            description: "Schedule service this week"
+          })
+        }
+
+        // Check for open incidents
+        const incidents = incidentsRes.data || []
+        const openIncidents = incidents.filter((i: any) => i.status === "open" || i.stateIR === "pending")
+        if (openIncidents.length > 0) {
+          newAlerts.push({
+            type: "notice",
+            title: `Notice: ${openIncidents.length} open incident${openIncidents.length > 1 ? 's' : ''}`,
+            description: "Review and assign for resolution"
+          })
+        }
+
+        // Check for pending tours
+        if (statsRes.data?.pendingTours > 0) {
+          newAlerts.push({
+            type: "notice",
+            title: `Notice: ${statsRes.data.pendingTours} tour${statsRes.data.pendingTours > 1 ? 's' : ''} pending`,
+            description: "Review route optimization"
+          })
+        }
+
+        setAlerts(newAlerts.slice(0, 3)) // Show max 3 alerts
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -54,8 +166,10 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Total Tours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">345</div>
-            <p className="text-xs text-foreground/60 mt-1">↑ 12% this month</p>
+            <div className="text-3xl font-bold text-primary">{stats?.totalTours || 0}</div>
+            <p className="text-xs text-foreground/60 mt-1">
+              {stats?.inProgressTours || 0} in progress
+            </p>
           </CardContent>
         </Card>
 
@@ -64,18 +178,20 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Active Vehicles</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">42</div>
-            <p className="text-xs text-foreground/60 mt-1">All operational</p>
+            <div className="text-3xl font-bold text-primary">{stats?.operationalVehicles || 0}</div>
+            <p className="text-xs text-foreground/60 mt-1">
+              {stats?.maintenanceVehicles || 0} in maintenance
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">CO₂ Saved (Tons)</CardTitle>
+            <CardTitle className="text-sm font-medium">CO₂ Emissions (kg)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">825</div>
-            <p className="text-xs text-foreground/60 mt-1">↓ 15% vs last month</p>
+            <div className="text-3xl font-bold text-green-600">{stats?.co2Saved || 0}</div>
+            <p className="text-xs text-foreground/60 mt-1">From all tours</p>
           </CardContent>
         </Card>
 
@@ -84,8 +200,10 @@ export default function AdminDashboard() {
             <CardTitle className="text-sm font-medium">Collection Points</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">156</div>
-            <p className="text-xs text-foreground/60 mt-1">8 requiring attention</p>
+            <div className="text-3xl font-bold text-primary">{stats?.totalCollectionPoints || 0}</div>
+            <p className="text-xs text-foreground/60 mt-1">
+              {stats?.criticalPoints || 0} requiring attention
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -165,27 +283,58 @@ export default function AdminDashboard() {
             <CardDescription>Issues requiring attention</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-start gap-3 p-3 border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-red-900 dark:text-red-100">Critical: 3 overflowing containers</p>
-                <p className="text-sm text-red-700 dark:text-red-200">Immediate collection needed</p>
+            {alerts.length === 0 ? (
+              <div className="flex items-center justify-center p-6 text-foreground/60">
+                <p>No alerts - all systems operational</p>
               </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 border border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-100">Warning: Vehicle 08 maintenance due</p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-200">Schedule service this week</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 border border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-100">Notice: 5 tours behind schedule</p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-200">Review route optimization</p>
-              </div>
-            </div>
+            ) : (
+              alerts.map((alert, index) => (
+                <div
+                  key={index}
+                  className={`flex items-start gap-3 p-3 border rounded-lg ${
+                    alert.type === "critical"
+                      ? "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950"
+                      : alert.type === "warning"
+                        ? "border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950"
+                        : "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950"
+                  }`}
+                >
+                  <AlertCircle
+                    className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                      alert.type === "critical"
+                        ? "text-red-600"
+                        : alert.type === "warning"
+                          ? "text-yellow-600"
+                          : "text-blue-600"
+                    }`}
+                  />
+                  <div>
+                    <p
+                      className={`font-medium ${
+                        alert.type === "critical"
+                          ? "text-red-900 dark:text-red-100"
+                          : alert.type === "warning"
+                            ? "text-yellow-900 dark:text-yellow-100"
+                            : "text-blue-900 dark:text-blue-100"
+                      }`}
+                    >
+                      {alert.title}
+                    </p>
+                    <p
+                      className={`text-sm ${
+                        alert.type === "critical"
+                          ? "text-red-700 dark:text-red-200"
+                          : alert.type === "warning"
+                            ? "text-yellow-700 dark:text-yellow-200"
+                            : "text-blue-700 dark:text-blue-200"
+                      }`}
+                    >
+                      {alert.description}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

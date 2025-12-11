@@ -1,12 +1,29 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { AlertCircle, MapPin, Calendar } from "lucide-react"
+import { AlertCircle, MapPin, Calendar, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { fetchCollectionPoints, fetchTours, getCurrentUser } from "@/lib/api-client"
+
+interface CollectionPoint {
+  id: string
+  name: string
+  distance: number
+  status: "empty" | "partial" | "full"
+  fillLevel: number
+}
+
+interface Collection {
+  id: string
+  zone: string
+  date: string
+  time: string
+}
 
 const wasteStats = [
   { month: "Jan", recycled: 45, waste: 24 },
@@ -17,23 +34,96 @@ const wasteStats = [
   { month: "Jun", recycled: 67, waste: 19 },
 ]
 
-const nextCollections = [
-  { id: 1, zone: "Downtown District", date: "2025-12-03", time: "09:00 AM", status: "upcoming" },
-  { id: 2, zone: "Residential Area A", date: "2025-12-05", time: "02:00 PM", status: "upcoming" },
-  { id: 3, zone: "Downtown District", date: "2025-12-10", time: "09:00 AM", status: "upcoming" },
-]
-
-const nearbyPoints = [
-  { id: 1, name: "Main Street Collection", distance: 0.3, status: "empty" as const },
-  { id: 2, name: "Park Avenue Point", distance: 0.5, status: "partial" as const },
-  { id: 3, name: "Central Hub", distance: 0.8, status: "full" as const },
-]
-
 export default function CitizenDashboard() {
+  const [user, setUser] = useState<any>(null)
+  const [nearbyPoints, setNearbyPoints] = useState<CollectionPoint[]>([])
+  const [nextCollections, setNextCollections] = useState<Collection[]>([])
+  const [alertMessage, setAlertMessage] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        // Get current user
+        const userRes = await getCurrentUser()
+        if (userRes.success && userRes.data) {
+          setUser(userRes.data)
+        } else {
+          const storedUser = localStorage.getItem("user")
+          if (storedUser) {
+            setUser(JSON.parse(storedUser))
+          }
+        }
+
+        // Fetch collection points
+        const pointsRes = await fetchCollectionPoints()
+        if (pointsRes.success && pointsRes.data) {
+          const mappedPoints: CollectionPoint[] = pointsRes.data.slice(0, 5).map((p: any, index: number) => {
+            const fillLevel = p.fillLevel || Math.floor(Math.random() * 100)
+            let status: "empty" | "partial" | "full" = "empty"
+            if (fillLevel >= 80) status = "full"
+            else if (fillLevel >= 40) status = "partial"
+            
+            return {
+              id: p.id || p.idCollectP,
+              name: p.name || p.addressCollectP || `Point ${index + 1}`,
+              distance: (Math.random() * 2).toFixed(1),
+              status,
+              fillLevel
+            }
+          })
+          setNearbyPoints(mappedPoints)
+
+          // Check for full containers to create alert
+          const fullPoints = mappedPoints.filter(p => p.status === "full")
+          if (fullPoints.length > 0) {
+            setAlertMessage(
+              `Collection point${fullPoints.length > 1 ? 's' : ''} near you (${fullPoints.map(p => p.name).join(", ")}) ${fullPoints.length > 1 ? 'are' : 'is'} full. Please use alternate locations temporarily.`
+            )
+          }
+        }
+
+        // Fetch tours for upcoming collections
+        const toursRes = await fetchTours()
+        if (toursRes.success && toursRes.data) {
+          const pendingTours = toursRes.data
+            .filter((t: any) => t.status === "pending" || t.statusTour === "pending")
+            .slice(0, 3)
+          
+          const mappedCollections: Collection[] = pendingTours.map((t: any) => ({
+            id: t.id || t.idCollectT,
+            zone: t.zone || t.name || t.nameTour || "Unknown Zone",
+            date: t.date || t.dateTour || new Date().toISOString().split("T")[0],
+            time: t.startTime || t.startTimeTour || "09:00 AM"
+          }))
+          setNextCollections(mappedCollections)
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  const userZone = user?.zone || user?.address || "Downtown District"
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome back!</h1>
+        <h1 className="text-3xl font-bold text-foreground">
+          Welcome back{user?.name ? `, ${user.name}` : ""}!
+        </h1>
         <p className="text-foreground/60">Here's your waste management overview</p>
       </div>
 
@@ -45,7 +135,7 @@ export default function CitizenDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">145 kg</div>
-            <p className="text-xs text-foreground/60 mt-1">↓ 12% from last month</p>
+            <p className="text-xs text-foreground/60 mt-1">Estimated average</p>
           </CardContent>
         </Card>
 
@@ -64,29 +154,29 @@ export default function CitizenDashboard() {
             <CardTitle className="text-sm font-medium">Your Zone</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">Zone A</div>
-            <p className="text-xs text-foreground/60 mt-1">Downtown District</p>
+            <div className="text-xl font-bold text-primary truncate">{userZone}</div>
+            <p className="text-xs text-foreground/60 mt-1">Your service area</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Eco Score</CardTitle>
+            <CardTitle className="text-sm font-medium">Nearby Points</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-accent">8.5/10</div>
-            <p className="text-xs text-foreground/60 mt-1">Great contributor</p>
+            <div className="text-3xl font-bold text-accent">{nearbyPoints.length}</div>
+            <p className="text-xs text-foreground/60 mt-1">Collection points</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Alerts */}
-      <Alert className="border-accent/20 bg-accent/5">
-        <AlertCircle className="h-4 w-4 text-accent" />
-        <AlertDescription>
-          Collection point near you (Main Street) is full. Please use alternate locations temporarily.
-        </AlertDescription>
-      </Alert>
+      {alertMessage && (
+        <Alert className="border-accent/20 bg-accent/5">
+          <AlertCircle className="h-4 w-4 text-accent" />
+          <AlertDescription>{alertMessage}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Next Collections */}
       <Card>
@@ -95,27 +185,33 @@ export default function CitizenDashboard() {
           <CardDescription>Scheduled waste collection in your zone</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {nextCollections.map((collection) => (
-              <div
-                key={collection.id}
-                className="flex items-center justify-between p-3 border border-border rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Calendar className="w-4 h-4 text-primary" />
+          {nextCollections.length === 0 ? (
+            <div className="text-center py-6 text-foreground/60">
+              No upcoming collections scheduled
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {nextCollections.map((collection) => (
+                <div
+                  key={collection.id}
+                  className="flex items-center justify-between p-3 border border-border rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Calendar className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{collection.zone}</p>
+                      <p className="text-sm text-foreground/60">
+                        {collection.date} at {collection.time}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-foreground">{collection.zone}</p>
-                    <p className="text-sm text-foreground/60">
-                      {collection.date} at {collection.time}
-                    </p>
-                  </div>
+                  <StatusBadge status="empty" label="Upcoming" />
                 </div>
-                <StatusBadge status="empty" label="Upcoming" />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -126,29 +222,35 @@ export default function CitizenDashboard() {
           <CardDescription>Container status near your location</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {nearbyPoints.map((point) => (
-              <div key={point.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <MapPin className="w-4 h-4 text-primary" />
+          {nearbyPoints.length === 0 ? (
+            <div className="text-center py-6 text-foreground/60">
+              No collection points found nearby
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {nearbyPoints.map((point) => (
+                <div key={point.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <MapPin className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{point.name}</p>
+                      <p className="text-sm text-foreground/60">{point.distance} km away</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-foreground">{point.name}</p>
-                    <p className="text-sm text-foreground/60">{point.distance} km away</p>
-                  </div>
+                  <StatusBadge status={point.status} />
                 </div>
-                <StatusBadge status={point.status} />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Waste Statistics */}
       <Card>
         <CardHeader>
-          <CardTitle>Your Contribution</CardTitle>
+          <CardTitle>Community Contribution</CardTitle>
           <CardDescription>Monthly waste and recycling trends</CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectPoint>
+  <idCP>CP-004</idCP>
+  <nameCP>North District Point</nameCP>
+  <adressCP>78 North Road, Residential Area A</adressCP>
+  <latitudeGPS>36.8145</latitudeGPS>
+  <longitudeGPS>10.1756</longitudeGPS>
+  <capacityCP>350</capacityCP>
+  <fillLevel>35</fillLevel>
+  <wasteType>organic</wasteType>
+  <priorityCP>3</priorityCP>
+  <lastCollectDate>2025-12-10</lastCollectDate>
+</CollectPoint>

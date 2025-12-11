@@ -7,7 +7,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Leaf } from "lucide-react"
+import { login } from "@/lib/api-client"
 
 const USER_ROLES = {
   CITIZEN: "citizen",
@@ -18,24 +18,40 @@ const USER_ROLES = {
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState(USER_ROLES.CITIZEN)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError("")
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    try {
+      const result = await login(email, password)
 
-    // Mock redirect based on role
-    const redirects: Record<string, string> = {
-      [USER_ROLES.CITIZEN]: "/citizen/dashboard",
-      [USER_ROLES.AGENT]: "/agent/dashboard",
-      [USER_ROLES.ADMIN]: "/admin/dashboard",
+      if (!result.success) {
+        setError(result.error || "Login failed")
+        setLoading(false)
+        return
+      }
+
+      // Store user info in localStorage for client-side access
+      localStorage.setItem("user", JSON.stringify(result.user))
+      localStorage.setItem("sessionId", result.session?.sessionId || "")
+
+      // Redirect based on actual user role from the server
+      const userRole = result.user.role
+      const redirects: Record<string, string> = {
+        [USER_ROLES.CITIZEN]: "/citizen/dashboard",
+        [USER_ROLES.AGENT]: "/agent/dashboard",
+        [USER_ROLES.ADMIN]: "/admin/dashboard",
+      }
+
+      window.location.href = redirects[userRole] || "/citizen/dashboard"
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+      setLoading(false)
     }
-
-    window.location.href = redirects[role]
   }
 
   return (
@@ -60,19 +76,12 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
-              {/* Role Selection */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Role</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value={USER_ROLES.CITIZEN}>Citizen</option>
-                  <option value={USER_ROLES.AGENT}>Collection Agent</option>
-                  <option value={USER_ROLES.ADMIN}>Administrator</option>
-                </select>
-              </div>
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
 
               {/* Email */}
               <div className="space-y-2">
@@ -97,7 +106,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -113,8 +122,9 @@ export default function LoginPage() {
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-secondary/10 rounded-lg space-y-2">
               <p className="text-sm font-medium text-foreground">Demo Credentials:</p>
-              <p className="text-xs text-foreground/60">Email: demo@ecocollect.io</p>
-              <p className="text-xs text-foreground/60">Password: demo123</p>
+              <p className="text-xs text-foreground/60">Admin: admin@ecocollect.io / admin123</p>
+              <p className="text-xs text-foreground/60">Agent: agent@ecocollect.io / agent123</p>
+              <p className="text-xs text-foreground/60">Citizen: citizen@ecocollect.io / citizen123</p>
             </div>
           </CardContent>
         </Card>

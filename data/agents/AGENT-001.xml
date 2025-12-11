@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectAgent>
+  <idUser>AGENT-001</idUser>
+  <emailU>agent@ecocollect.io</emailU>
+  <nameU>Ahmed Ben Ali</nameU>
+  <pwdU>c2FsdDphZ2VudDEyMw==</pwdU>
+  <role>agent</role>
+  <recruitmentDateEmp>2024-03-01</recruitmentDateEmp>
+  <salaryEmp>2500</salaryEmp>
+  <telEmp>+216 71 234 567</telEmp>
+  <disponibility>true</disponibility>
+  <roleAgent>collector</roleAgent>
+</CollectAgent>

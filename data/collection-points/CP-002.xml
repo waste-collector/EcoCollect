@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectPoint>
+  <idCP>CP-002</idCP>
+  <nameCP>Park Avenue Point</nameCP>
+  <adressCP>45 Park Avenue, Downtown</adressCP>
+  <latitudeGPS>36.8089</latitudeGPS>
+  <longitudeGPS>10.1798</longitudeGPS>
+  <capacityCP>400</capacityCP>
+  <fillLevel>78</fillLevel>
+  <wasteType>recyclable</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-09</lastCollectDate>
+</CollectPoint>

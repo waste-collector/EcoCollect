@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IncidentReport>
+  <idIR>INC-003</idIR>
+  <typeIR>route-issue</typeIR>
+  <descIR>Scheduled collection was missed at West End Station</descIR>
+  <adressIR>22 West End Lane, Residential Area A</adressIR>
+  <dateIR>2025-12-08</dateIR>
+  <stateIR>resolved</stateIR>
+  <idcitizen>citizen-002</idcitizen>
+  <idCP>CP-005</idCP>
+</IncidentReport>

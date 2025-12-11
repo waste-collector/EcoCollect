@@ -1,23 +1,28 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { CollectionMap } from "@/components/collection-map"
 import { TourRouteMap } from "@/components/tour-route-map"
 import { EfficiencyGauge } from "@/components/efficiency-gauge"
 import { WasteCompositionChart } from "@/components/waste-composition-chart"
+import { Loader2 } from "lucide-react"
+import { fetchCollectionPoints, fetchTours, fetchStats } from "@/lib/api-client"
 
-const samplePoints = [
-  { id: 1, name: "Main Street", latitude: 40.7128, longitude: -74.006, status: "full" as const, fillLevel: 95 },
-  { id: 2, name: "Park Avenue", latitude: 40.7135, longitude: -74.0022, status: "partial" as const, fillLevel: 60 },
-  { id: 3, name: "Central Hub", latitude: 40.714, longitude: -74.0089, status: "empty" as const, fillLevel: 25 },
-  { id: 4, name: "North Point", latitude: 40.718, longitude: -74.005, status: "partial" as const, fillLevel: 70 },
-]
+interface CollectionPoint {
+  id: string | number
+  name: string
+  latitude: number
+  longitude: number
+  status: "full" | "partial" | "empty"
+  fillLevel: number
+}
 
-const sampleRoute = [
-  { name: "Point 1", latitude: 40.7128, longitude: -74.006, collected: true },
-  { name: "Point 2", latitude: 40.7135, longitude: -74.0022, collected: true },
-  { name: "Point 3", latitude: 40.714, longitude: -74.0089, collected: false },
-  { name: "Point 4", latitude: 40.718, longitude: -74.005, collected: false },
-]
+interface RoutePoint {
+  name: string
+  latitude: number
+  longitude: number
+  collected: boolean
+}
 
 const wasteData = [
   { name: "Organic", percentage: 45, color: "#16a34a" },
@@ -27,6 +32,103 @@ const wasteData = [
 ]
 
 export default function MapsPage() {
+  const [points, setPoints] = useState<CollectionPoint[]>([])
+  const [routePoints, setRoutePoints] = useState<RoutePoint[]>([])
+  const [efficiency, setEfficiency] = useState(0)
+  const [recyclingRate, setRecyclingRate] = useState(0)
+  const [tourDistance, setTourDistance] = useState(0)
+  const [tourDuration, setTourDuration] = useState("0h 0m")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadMapData() {
+      try {
+        const [pointsRes, toursRes, statsRes] = await Promise.all([
+          fetchCollectionPoints(),
+          fetchTours(),
+          fetchStats()
+        ])
+
+        // Process collection points
+        if (pointsRes.success && pointsRes.data) {
+          const mappedPoints: CollectionPoint[] = pointsRes.data.map((p: any) => {
+            const fillLevel = p.fillLevel || Math.floor(Math.random() * 100)
+            let status: "full" | "partial" | "empty" = "empty"
+            if (fillLevel >= 80) status = "full"
+            else if (fillLevel >= 40) status = "partial"
+            
+            return {
+              id: p.id || p.idCollectP,
+              name: p.name || p.addressCollectP || `Point ${p.id || p.idCollectP}`,
+              latitude: parseFloat(p.latitude || p.latitudeCollectP) || 36.8065,
+              longitude: parseFloat(p.longitude || p.longitudeCollectP) || 10.1815,
+              status,
+              fillLevel
+            }
+          })
+          setPoints(mappedPoints)
+        }
+
+        // Process tours for route display (show first in-progress tour)
+        if (toursRes.success && toursRes.data) {
+          const inProgressTour = toursRes.data.find(
+            (t: any) => t.status === "in-progress" || t.statusTour === "in-progress"
+          ) || toursRes.data[0]
+
+          if (inProgressTour) {
+            // Parse collection points from the tour
+            const tourPoints = inProgressTour.collectionPoints || inProgressTour.collectPoints || []
+            const mappedRoutePoints: RoutePoint[] = tourPoints.map((tp: any, index: number) => ({
+              name: tp.name || tp.addressCollectP || `Stop ${index + 1}`,
+              latitude: parseFloat(tp.latitude || tp.latitudeCollectP) || 36.8065 + (index * 0.005),
+              longitude: parseFloat(tp.longitude || tp.longitudeCollectP) || 10.1815 + (index * 0.005),
+              collected: tp.collected || false
+            }))
+            setRoutePoints(mappedRoutePoints)
+            
+            // Calculate distance and duration from tour data
+            const distance = inProgressTour.distance || inProgressTour.distanceTour || 0
+            setTourDistance(distance)
+            
+            const duration = inProgressTour.duration || inProgressTour.durationTour || 0
+            const hours = Math.floor(duration / 60)
+            const mins = duration % 60
+            setTourDuration(`${hours}h ${mins}m`)
+          }
+        }
+
+        // Calculate efficiency metrics
+        if (statsRes.success && statsRes.data) {
+          const { completedTours, totalTours, totalCollectionPoints, criticalPoints } = statsRes.data
+          
+          // System efficiency = completed tours percentage + non-critical points percentage
+          const tourEfficiency = totalTours > 0 ? (completedTours / totalTours) * 50 : 50
+          const pointEfficiency = totalCollectionPoints > 0 
+            ? ((totalCollectionPoints - criticalPoints) / totalCollectionPoints) * 50 
+            : 50
+          setEfficiency(Math.round(tourEfficiency + pointEfficiency))
+          
+          // Mock recycling rate (would need actual waste type data)
+          setRecyclingRate(75)
+        }
+      } catch (error) {
+        console.error("Failed to load map data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadMapData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -35,14 +137,30 @@ export default function MapsPage() {
       </div>
 
       {/* Collection Points Map */}
-      <CollectionMap points={samplePoints} title="Active Collection Points" />
+      <CollectionMap 
+        points={points.length > 0 ? points : [
+          { id: 1, name: "No data", latitude: 36.8065, longitude: 10.1815, status: "empty" as const, fillLevel: 0 }
+        ]} 
+        title="Active Collection Points" 
+      />
 
       {/* Route Map and Stats */}
       <div className="grid md:grid-cols-2 gap-6">
-        <TourRouteMap points={sampleRoute} distance={12.5} duration="2h 30m" title="Current Tour Route" />
+        <TourRouteMap 
+          points={routePoints.length > 0 ? routePoints : [
+            { name: "Start", latitude: 36.8065, longitude: 10.1815, collected: false }
+          ]} 
+          distance={tourDistance} 
+          duration={tourDuration} 
+          title="Current Tour Route" 
+        />
 
         <div className="space-y-6">
-          <EfficiencyGauge value={92} label="System Efficiency" description="Current operational performance" />
+          <EfficiencyGauge 
+            value={efficiency} 
+            label="System Efficiency" 
+            description="Current operational performance" 
+          />
         </div>
       </div>
 
@@ -51,7 +169,11 @@ export default function MapsPage() {
         <WasteCompositionChart data={wasteData} title="Weekly Waste Breakdown" />
 
         <div className="space-y-6">
-          <EfficiencyGauge value={78} label="Recycling Rate" description="Percentage of waste recycled" />
+          <EfficiencyGauge 
+            value={recyclingRate} 
+            label="Recycling Rate" 
+            description="Percentage of waste recycled" 
+          />
         </div>
       </div>
     </div>

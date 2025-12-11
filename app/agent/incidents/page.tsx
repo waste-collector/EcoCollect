@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { AlertCircle, Clock } from "lucide-react"
+import { AlertCircle, Clock, Loader2 } from "lucide-react"
+import { fetchIncidents, createIncident, updateIncident } from "@/lib/api-client"
 
 interface Incident {
   id: string
@@ -29,43 +29,10 @@ interface Incident {
   photos?: number
 }
 
-const initialIncidents: Incident[] = [
-  {
-    id: "INC-001",
-    title: "Vehicle Breakdown",
-    description: "Engine warning light appeared during route",
-    location: "Downtown District - Main Street",
-    type: "vehicle-issue",
-    severity: "high",
-    status: "open",
-    timestamp: "2025-12-02 02:30 PM",
-    photos: 2,
-  },
-  {
-    id: "INC-002",
-    title: "Container Overflow",
-    description: "Collection point overflowing, could not empty",
-    location: "Residential Area A - North District",
-    type: "container-problem",
-    severity: "high",
-    status: "acknowledged",
-    timestamp: "2025-12-02 01:15 PM",
-    photos: 1,
-  },
-  {
-    id: "INC-003",
-    title: "Traffic Delay",
-    description: "Unexpected traffic caused route delay",
-    location: "Downtown District",
-    type: "route-issue",
-    severity: "low",
-    status: "resolved",
-    timestamp: "2025-12-01 11:00 AM",
-  },
-]
-
 export default function IncidentsPage() {
-  const [incidents, setIncidents] = useState<Incident[]>(initialIncidents)
+  const [incidents, setIncidents] = useState<Incident[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
@@ -75,19 +42,117 @@ export default function IncidentsPage() {
     severity: "medium" as Incident["severity"],
   })
 
-  const handleSubmitIncident = (e: React.FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    loadIncidents()
+  }, [])
 
-    const newIncident: Incident = {
-      id: `INC-${String(incidents.length + 1).padStart(3, "0")}`,
-      ...formData,
-      status: "open",
-      timestamp: new Date().toLocaleString(),
+  async function loadIncidents() {
+    try {
+      const res = await fetchIncidents()
+      if (res.success && res.data) {
+        const mappedIncidents: Incident[] = res.data.map((i: any) => ({
+          id: i.id || i.idIR,
+          title: i.title || i.titleIR || "Untitled Incident",
+          description: i.description || i.descriptionIR || "",
+          location: i.location || i.locationIR || "Unknown",
+          type: normalizeType(i.type || i.typeIR),
+          severity: normalizeSeverity(i.severity || i.severityIR),
+          status: normalizeStatus(i.status || i.stateIR),
+          timestamp: i.timestamp || i.dateIR || new Date().toISOString(),
+          photos: i.photos || 0
+        }))
+        setIncidents(mappedIncidents)
+      }
+    } catch (error) {
+      console.error("Failed to load incidents:", error)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    setIncidents([newIncident, ...incidents])
-    setFormData({ title: "", description: "", location: "", type: "other", severity: "medium" })
-    setDialogOpen(false)
+  function normalizeType(type: string): Incident["type"] {
+    const t = (type || "other").toLowerCase().replace(/\s+/g, "-")
+    if (t.includes("vehicle")) return "vehicle-issue"
+    if (t.includes("container") || t.includes("overflow")) return "container-problem"
+    if (t.includes("route") || t.includes("traffic")) return "route-issue"
+    return "other"
+  }
+
+  function normalizeSeverity(severity: string): Incident["severity"] {
+    const s = (severity || "medium").toLowerCase()
+    if (s === "high" || s === "critical") return "high"
+    if (s === "low" || s === "minor") return "low"
+    return "medium"
+  }
+
+  function normalizeStatus(status: string): Incident["status"] {
+    const s = (status || "open").toLowerCase()
+    if (s === "resolved" || s === "closed" || s === "done") return "resolved"
+    if (s === "acknowledged" || s === "in-progress" || s === "pending") return "acknowledged"
+    return "open"
+  }
+
+  const handleSubmitIncident = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    try {
+      const incidentData = {
+        title: formData.title,
+        titleIR: formData.title,
+        description: formData.description,
+        descriptionIR: formData.description,
+        location: formData.location,
+        locationIR: formData.location,
+        type: formData.type,
+        typeIR: formData.type,
+        severity: formData.severity,
+        severityIR: formData.severity,
+        status: "open",
+        stateIR: "open",
+        timestamp: new Date().toISOString(),
+        dateIR: new Date().toISOString()
+      }
+
+      const res = await createIncident(incidentData)
+      
+      if (res.success) {
+        const newIncident: Incident = {
+          id: res.data?.id || `INC-${Date.now()}`,
+          ...formData,
+          status: "open",
+          timestamp: new Date().toLocaleString(),
+        }
+
+        setIncidents([newIncident, ...incidents])
+        setFormData({ title: "", description: "", location: "", type: "other", severity: "medium" })
+        setDialogOpen(false)
+      } else {
+        alert(`Failed to create incident: ${res.error || "Unknown error"}`)
+      }
+    } catch (error) {
+      console.error("Failed to create incident:", error)
+      alert("Failed to create incident")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleAcknowledge = async (incidentId: string) => {
+    try {
+      const res = await updateIncident(incidentId, { 
+        status: "acknowledged",
+        stateIR: "acknowledged"
+      })
+      
+      if (res.success) {
+        setIncidents(prev => prev.map(i => 
+          i.id === incidentId ? { ...i, status: "acknowledged" } : i
+        ))
+      }
+    } catch (error) {
+      console.error("Failed to acknowledge incident:", error)
+    }
   }
 
   const getSeverityColor = (severity: Incident["severity"]) => {
@@ -110,6 +175,17 @@ export default function IncidentsPage() {
     }
     return labels[type]
   }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  const openIncidents = incidents.filter(i => i.status === "open").length
+  const highSeverity = incidents.filter(i => i.severity === "high").length
 
   return (
     <div className="space-y-6">
@@ -184,7 +260,8 @@ export default function IncidentsPage() {
                   </select>
                 </div>
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Submit Incident
               </Button>
             </form>
@@ -207,7 +284,7 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Open Issues</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{incidents.filter((i) => i.status === "open").length}</div>
+            <div className="text-2xl font-bold text-red-600">{openIncidents}</div>
           </CardContent>
         </Card>
         <Card>
@@ -215,64 +292,74 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">High Severity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {incidents.filter((i) => i.severity === "high").length}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{highSeverity}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Incidents List */}
-      <div className="space-y-3">
-        {incidents.map((incident) => (
-          <Card key={incident.id}>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${incident.severity === "high" ? "bg-red-100 dark:bg-red-900" : incident.severity === "medium" ? "bg-yellow-100 dark:bg-yellow-900" : "bg-green-100 dark:bg-green-900"}`}
-                    >
-                      <AlertCircle className="w-5 h-5" />
+      {incidents.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-foreground/60">
+            No incidents reported. Click "Report Incident" to create one.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {incidents.map((incident) => (
+            <Card key={incident.id}>
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${incident.severity === "high" ? "bg-red-100 dark:bg-red-900" : incident.severity === "medium" ? "bg-yellow-100 dark:bg-yellow-900" : "bg-green-100 dark:bg-green-900"}`}
+                      >
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-foreground">{incident.title}</h3>
+                        <p className="text-sm text-foreground/60 mt-1">{incident.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{incident.title}</h3>
-                      <p className="text-sm text-foreground/60 mt-1">{incident.description}</p>
+                    <span className={`text-xs px-2 py-1 rounded-full ${getSeverityColor(incident.severity)}`}>
+                      {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 text-sm text-foreground/60">
+                    <div>Location: {incident.location}</div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {incident.timestamp}
                     </div>
+                    <div className="bg-muted px-2 py-1 rounded">{getTypeLabel(incident.type)}</div>
+                    {incident.photos && incident.photos > 0 && <div>Photos: {incident.photos}</div>}
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getSeverityColor(incident.severity)}`}>
-                    {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
-                  </span>
-                </div>
 
-                <div className="flex flex-wrap gap-3 text-sm text-foreground/60">
-                  <div>📍 {incident.location}</div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {incident.timestamp}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <StatusBadge
+                      status={
+                        incident.status === "resolved" ? "empty" : incident.status === "acknowledged" ? "partial" : "full"
+                      }
+                      label={incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
+                    />
+                    {incident.status === "open" && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleAcknowledge(incident.id)}
+                      >
+                        Acknowledge
+                      </Button>
+                    )}
                   </div>
-                  <div className="bg-muted px-2 py-1 rounded">{getTypeLabel(incident.type)}</div>
-                  {incident.photos && <div>📷 {incident.photos} photo(s)</div>}
                 </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <StatusBadge
-                    status={
-                      incident.status === "resolved" ? "empty" : incident.status === "acknowledged" ? "partial" : "full"
-                    }
-                    label={incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
-                  />
-                  {incident.status === "open" && (
-                    <Button variant="outline" size="sm">
-                      Acknowledge
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="CollectTour" type="CollectTour"/>
+  
+  <xs:complexType name="CollectTour">
+    <xs:sequence>
+      <xs:element name="idTour" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="dateTour" type="xs:date" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="statusTour" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="distanceTour" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="estimedTimeTour" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="collectedQuantityTour" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="CO2emissionTour" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="idClAgents" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="idClAgent" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="idCPs" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="idCP" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="immatV" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

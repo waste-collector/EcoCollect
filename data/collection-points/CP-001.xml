@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectPoint>
+  <idCP>CP-001</idCP>
+  <nameCP>Main Street Collection</nameCP>
+  <adressCP>123 Main Street, Downtown</adressCP>
+  <latitudeGPS>36.8065</latitudeGPS>
+  <longitudeGPS>10.1815</longitudeGPS>
+  <capacityCP>500</capacityCP>
+  <fillLevel>45</fillLevel>
+  <wasteType>mixed</wasteType>
+  <priorityCP>2</priorityCP>
+  <lastCollectDate>2025-12-10</lastCollectDate>
+</CollectPoint>

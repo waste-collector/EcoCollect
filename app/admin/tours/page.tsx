@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,154 +15,134 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { Trash2, Edit, Download, Upload } from "lucide-react"
-
-interface Tour {
-  id: string
-  name: string
-  zone: string
-  agent: string
-  vehicle: string
-  distance: number
-  duration: string
-  status: "completed" | "in-progress" | "pending"
-  date: string
-}
-
-const initialTours: Tour[] = [
-  {
-    id: "TOUR-001",
-    name: "Downtown Morning Route",
-    zone: "Downtown District",
-    agent: "John Smith",
-    vehicle: "V-001",
-    distance: 12.5,
-    duration: "2h 30m",
-    status: "completed",
-    date: "2025-12-02",
-  },
-  {
-    id: "TOUR-002",
-    name: "Residential Area A - Afternoon",
-    zone: "Residential Area A",
-    agent: "Sarah Johnson",
-    vehicle: "V-005",
-    distance: 8.3,
-    duration: "1h 45m",
-    status: "in-progress",
-    date: "2025-12-02",
-  },
-  {
-    id: "TOUR-003",
-    name: "Downtown Evening Route",
-    zone: "Downtown District",
-    agent: "Mike Wilson",
-    vehicle: "V-003",
-    distance: 10.2,
-    duration: "2h 15m",
-    status: "pending",
-    date: "2025-12-03",
-  },
-]
+import { Trash2, Edit, Download, Upload, MapPin } from "lucide-react"
+import { fetchTours, createTour, deleteTour, importToursXML, exportToursXML } from "@/lib/api-client"
+import type { CollectTour } from "@/lib/types"
 
 export default function ToursPage() {
-  const [tours, setTours] = useState<Tour[]>(initialTours)
+  const [tours, setTours] = useState<CollectTour[]>([])
+  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
-    name: "",
-    zone: "",
-    agent: "",
-    vehicle: "",
-    distance: "",
+    dateTour: new Date().toISOString().split("T")[0],
+    distanceTour: "",
+    estimedTimeTour: "02:00",
+    immatV: "",
   })
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [xmlFile, setXmlFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleAddTour = (e: React.FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    loadTours()
+  }, [])
 
-    const newTour: Tour = {
-      id: `TOUR-${String(tours.length + 1).padStart(3, "0")}`,
-      name: formData.name,
-      zone: formData.zone,
-      agent: formData.agent,
-      vehicle: formData.vehicle,
-      distance: Number.parseFloat(formData.distance),
-      duration: "2h 0m",
-      status: "pending",
-      date: new Date().toISOString().split("T")[0],
+  async function loadTours() {
+    setLoading(true)
+    try {
+      const result = await fetchTours()
+      if (result.success && result.data) {
+        setTours(result.data)
+      }
+    } catch (err) {
+      console.error("Failed to load tours:", err)
+    } finally {
+      setLoading(false)
     }
-
-    setTours([...tours, newTour])
-    setFormData({ name: "", zone: "", agent: "", vehicle: "", distance: "" })
-    setDialogOpen(false)
   }
 
-  const handleDeleteTour = (id: string) => {
-    setTours(tours.filter((t) => t.id !== id))
+  const handleAddTour = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError("")
+
+    try {
+      const result = await createTour({
+        dateTour: formData.dateTour,
+        distanceTour: Number.parseFloat(formData.distanceTour),
+        estimedTimeTour: formData.estimedTimeTour,
+        statusTour: "pending",
+        immatV: formData.immatV,
+        collectedQuantityTour: 0,
+        CO2emissionTour: 0,
+      })
+
+      if (result.success) {
+        setFormData({
+          dateTour: new Date().toISOString().split("T")[0],
+          distanceTour: "",
+          estimedTimeTour: "02:00",
+          immatV: "",
+        })
+        setDialogOpen(false)
+        loadTours()
+      } else {
+        setError(result.error || "Failed to create tour")
+      }
+    } catch (err) {
+      setError("An error occurred")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleExportXML = () => {
-    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<tours>
-  ${tours
-    .map(
-      (tour) => `
-  <tour>
-    <id>${tour.id}</id>
-    <name>${tour.name}</name>
-    <zone>${tour.zone}</zone>
-    <agent>${tour.agent}</agent>
-    <vehicle>${tour.vehicle}</vehicle>
-    <distance>${tour.distance}</distance>
-    <duration>${tour.duration}</duration>
-    <status>${tour.status}</status>
-    <date>${tour.date}</date>
-  </tour>
-  `,
-    )
-    .join("")}
-</tours>`
+  const handleDeleteTour = async (idTour: string) => {
+    if (!confirm("Are you sure you want to delete this tour?")) return
 
-    const element = document.createElement("a")
-    element.setAttribute("href", "data:text/xml;charset=utf-8," + encodeURIComponent(xmlContent))
-    element.setAttribute("download", "tours_export.xml")
-    element.style.display = "none"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+    try {
+      const result = await deleteTour(idTour)
+      if (result.success) {
+        loadTours()
+      }
+    } catch (err) {
+      console.error("Failed to delete tour:", err)
+    }
   }
 
-  const handleImportXML = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExportXML = async () => {
+    try {
+      const result = await exportToursXML()
+      if (result.success && result.xml) {
+        const element = document.createElement("a")
+        element.setAttribute("href", "data:text/xml;charset=utf-8," + encodeURIComponent(result.xml))
+        element.setAttribute("download", "tours_export.xml")
+        element.style.display = "none"
+        document.body.appendChild(element)
+        element.click()
+        document.body.removeChild(element)
+      }
+    } catch (err) {
+      console.error("Failed to export:", err)
+    }
+  }
+
+  const handleImportXML = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const xml = event.target?.result as string
-          const parser = new DOMParser()
-          const xmlDoc = parser.parseFromString(xml, "text/xml")
-          const tourElements = xmlDoc.getElementsByTagName("tour")
-
-          const importedTours: Tour[] = Array.from(tourElements).map((el, idx) => ({
-            id: el.getElementsByTagName("id")[0]?.textContent || `TOUR-IMP-${idx}`,
-            name: el.getElementsByTagName("name")[0]?.textContent || "",
-            zone: el.getElementsByTagName("zone")[0]?.textContent || "",
-            agent: el.getElementsByTagName("agent")[0]?.textContent || "",
-            vehicle: el.getElementsByTagName("vehicle")[0]?.textContent || "",
-            distance: Number.parseFloat(el.getElementsByTagName("distance")[0]?.textContent || "0"),
-            duration: el.getElementsByTagName("duration")[0]?.textContent || "",
-            status: (el.getElementsByTagName("status")[0]?.textContent || "pending") as Tour["status"],
-            date: el.getElementsByTagName("date")[0]?.textContent || "",
-          }))
-
-          setTours([...tours, ...importedTours])
-          alert(`Successfully imported ${importedTours.length} tours`)
+          const result = await importToursXML(xml)
+          
+          if (result.success) {
+            alert(`Successfully imported ${result.imported || 0} tours`)
+            loadTours()
+          } else {
+            alert(`Import failed: ${result.error || "Unknown error"}`)
+          }
         } catch (error) {
-          alert("Error parsing XML file")
+          alert("Error importing XML file")
         }
       }
       reader.readAsText(file)
     }
+    e.target.value = ""
+  }
+
+  const getStatusBadgeType = (status: string): "empty" | "partial" | "full" => {
+    if (status === "completed") return "empty"
+    if (status === "in-progress") return "partial"
+    return "full"
   }
 
   return (
@@ -183,45 +163,26 @@ export default function ToursPage() {
                 <DialogDescription>Add a new collection tour</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddTour} className="space-y-4">
+                {error && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm text-destructive">{error}</p>
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Tour Name</label>
+                  <label className="text-sm font-medium text-foreground">Tour Date</label>
                   <Input
-                    placeholder="e.g., Downtown Morning Route"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Zone</label>
-                  <select
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                    value={formData.zone}
-                    onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                    required
-                  >
-                    <option value="">Select zone...</option>
-                    <option value="Downtown District">Downtown District</option>
-                    <option value="Residential Area A">Residential Area A</option>
-                    <option value="Residential Area B">Residential Area B</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Agent</label>
-                  <Input
-                    placeholder="Agent name"
-                    value={formData.agent}
-                    onChange={(e) => setFormData({ ...formData, agent: e.target.value })}
+                    type="date"
+                    value={formData.dateTour}
+                    onChange={(e) => setFormData({ ...formData, dateTour: e.target.value })}
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Vehicle ID</label>
                   <Input
-                    placeholder="e.g., V-001"
-                    value={formData.vehicle}
-                    onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
-                    required
+                    placeholder="e.g., VEH-001"
+                    value={formData.immatV}
+                    onChange={(e) => setFormData({ ...formData, immatV: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -230,13 +191,22 @@ export default function ToursPage() {
                     type="number"
                     step="0.1"
                     placeholder="e.g., 12.5"
-                    value={formData.distance}
-                    onChange={(e) => setFormData({ ...formData, distance: e.target.value })}
+                    value={formData.distanceTour}
+                    onChange={(e) => setFormData({ ...formData, distanceTour: e.target.value })}
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
-                  Create Tour
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Estimated Time</label>
+                  <Input
+                    placeholder="e.g., 02:30"
+                    value={formData.estimedTimeTour}
+                    onChange={(e) => setFormData({ ...formData, estimedTimeTour: e.target.value })}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? "Creating..." : "Create Tour"}
                 </Button>
               </form>
             </DialogContent>
@@ -257,43 +227,60 @@ export default function ToursPage() {
         </div>
       </div>
 
-      {/* Tours List */}
-      <div className="space-y-3">
-        {tours.map((tour) => (
-          <Card key={tour.id}>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-foreground">{tour.name}</h3>
-                    <span className="text-xs bg-muted px-2 py-1 rounded">{tour.id}</span>
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : tours.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <MapPin className="w-12 h-12 mx-auto text-foreground/40 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Tours Yet</h3>
+            <p className="text-foreground/60 mb-4">Create your first collection tour to get started</p>
+            <Button onClick={() => setDialogOpen(true)}>Create Tour</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        /* Tours List */
+        <div className="space-y-3">
+          {tours.map((tour) => (
+            <Card key={tour.idTour}>
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground">
+                        Tour {tour.idTour}
+                      </h3>
+                      <span className="text-xs bg-muted px-2 py-1 rounded">{tour.dateTour}</span>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 text-sm text-foreground/60">
+                      <div>Vehicle: {tour.immatV || "Unassigned"}</div>
+                      <div>Distance: {tour.distanceTour} km</div>
+                      <div>Duration: {tour.estimedTimeTour}</div>
+                      <div>Collected: {tour.collectedQuantityTour} kg</div>
+                      <div>CO2 Emission: {tour.CO2emissionTour} kg</div>
+                    </div>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4 text-sm text-foreground/60">
-                    <div>📍 Zone: {tour.zone}</div>
-                    <div>👤 Agent: {tour.agent}</div>
-                    <div>🚛 Vehicle: {tour.vehicle}</div>
-                    <div>📏 Distance: {tour.distance} km</div>
-                    <div>⏱️ Duration: {tour.duration}</div>
-                    <div>📅 Date: {tour.date}</div>
+                  <div className="flex flex-col gap-2 items-end">
+                    <StatusBadge
+                      status={getStatusBadgeType(tour.statusTour)}
+                      label={tour.statusTour.charAt(0).toUpperCase() + tour.statusTour.slice(1).replace("-", " ")}
+                    />
+                    <Button variant="ghost" size="sm">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteTour(tour.idTour)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 items-end">
-                  <StatusBadge
-                    status={tour.status === "completed" ? "empty" : tour.status === "in-progress" ? "partial" : "full"}
-                    label={tour.status.charAt(0).toUpperCase() + tour.status.slice(1)}
-                  />
-                  <Button variant="ghost" size="sm">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteTour(tour.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

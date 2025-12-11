@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectPoint>
+  <idCP>CP-003</idCP>
+  <nameCP>Central Hub</nameCP>
+  <adressCP>1 Central Plaza, Downtown</adressCP>
+  <latitudeGPS>36.8102</latitudeGPS>
+  <longitudeGPS>10.1832</longitudeGPS>
+  <capacityCP>800</capacityCP>
+  <fillLevel>92</fillLevel>
+  <wasteType>mixed</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-08</lastCollectDate>
+</CollectPoint>

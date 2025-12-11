@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Citizen>
+  <idUser>citizen-001</idUser>
+  <emailU>citizen@ecocollect.io</emailU>
+  <nameU>Mohamed Salah</nameU>
+  <pwdU>c2FsdDpjaXRpemVuMTIz</pwdU>
+  <role>citizen</role>
+  <adressCit>123 Main Street, Downtown</adressCit>
+  <phoneCit>+216 71 456 789</phoneCit>
+  <zoneCit>Downtown District</zoneCit>
+  <createdAt>2025-12-11T18:26:59.208Z</createdAt>
+  <updatedAt>2025-12-11T18:26:59.208Z</updatedAt>
+</Citizen>

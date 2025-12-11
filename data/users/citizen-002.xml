@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Citizen>
+  <idUser>citizen-002</idUser>
+  <emailU>sara@ecocollect.io</emailU>
+  <nameU>Sara Hamdi</nameU>
+  <pwdU>c2FsdDpjaXRpemVuMTIz</pwdU>
+  <role>citizen</role>
+  <adressCit>45 Park Avenue, Residential Area A</adressCit>
+  <phoneCit>+216 71 567 890</phoneCit>
+  <zoneCit>Residential Area A</zoneCit>
+  <createdAt>2025-12-11T18:26:59.208Z</createdAt>
+  <updatedAt>2025-12-11T18:26:59.208Z</updatedAt>
+</Citizen>

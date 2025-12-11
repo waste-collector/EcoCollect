@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Administrator>
+  <idUser>admin-001</idUser>
+  <emailU>admin@ecocollect.io</emailU>
+  <nameU>Admin User</nameU>
+  <pwdU>c2FsdDphZG1pbjEyMw==</pwdU>
+  <role>administrator</role>
+  <recruitmentDateEmp>2024-01-15</recruitmentDateEmp>
+  <salaryEmp>5000</salaryEmp>
+  <telEmp>+216 71 123 456</telEmp>
+  <functionAdmin>System Administrator</functionAdmin>
+  <createdAt>2025-12-11T18:26:59.208Z</createdAt>
+  <updatedAt>2025-12-11T18:26:59.208Z</updatedAt>
+</Administrator>

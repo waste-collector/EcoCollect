@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectPoint>
+  <idCP>6ce075bd-8df6-4636-b530-e2eded2f09da</idCP>
+  <nameCP>poinx</nameCP>
+  <adressCP/>
+  <latitudeGPS>34.7406</latitudeGPS>
+  <longitudeGPS>10.7603</longitudeGPS>
+  <capacityCP>100</capacityCP>
+  <fillLevel>0</fillLevel>
+  <wasteType>mixed</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-11</lastCollectDate>
+</CollectPoint>

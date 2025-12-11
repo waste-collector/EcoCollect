@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectPoint>
+  <idCP>CP-006</idCP>
+  <nameCP>South Point</nameCP>
+  <adressCP>99 South Avenue, Residential Area B</adressCP>
+  <latitudeGPS>36.7998</latitudeGPS>
+  <longitudeGPS>10.1845</longitudeGPS>
+  <capacityCP>300</capacityCP>
+  <fillLevel>28</fillLevel>
+  <wasteType>recyclable</wasteType>
+  <priorityCP>4</priorityCP>
+  <lastCollectDate>2025-12-10</lastCollectDate>
+</CollectPoint>

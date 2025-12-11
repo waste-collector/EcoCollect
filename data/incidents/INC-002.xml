@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IncidentReport>
+  <idIR>INC-002</idIR>
+  <typeIR>vehicle-issue</typeIR>
+  <descIR>Vehicle VEH-003 engine warning light appeared during route</descIR>
+  <adressIR>78 North Road, Residential Area A</adressIR>
+  <dateIR>2025-12-09</dateIR>
+  <stateIR>acknowledged</stateIR>
+  <idcitizen></idcitizen>
+  <idCP></idCP>
+</IncidentReport>

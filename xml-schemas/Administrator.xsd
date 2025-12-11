@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Administrator" type="Administrator"/>
+  
+  <xs:complexType name="Administrator">
+    <xs:sequence>
+      <xs:element name="idUser" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="emailU" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="nameU" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="pwdU" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="role" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="recruitmentDateEmp" type="xs:date" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="salaryEmp" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="telEmp" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="functionAdmin" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="createdAt" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="updatedAt" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

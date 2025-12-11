@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectAgent>
+  <idUser>AGENT-003</idUser>
+  <emailU>youssef@ecocollect.io</emailU>
+  <nameU>Youssef Karim</nameU>
+  <pwdU>c2FsdDphZ2VudDEyMw==</pwdU>
+  <role>agent</role>
+  <recruitmentDateEmp>2024-02-20</recruitmentDateEmp>
+  <salaryEmp>2800</salaryEmp>
+  <telEmp>+216 71 678 901</telEmp>
+  <disponibility>false</disponibility>
+  <roleAgent>supervisor</roleAgent>
+</CollectAgent>

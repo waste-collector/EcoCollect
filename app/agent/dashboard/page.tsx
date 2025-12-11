@@ -1,33 +1,145 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { MapPin } from "lucide-react"
+import { MapPin, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { fetchTours, fetchIncidents, getCurrentUser } from "@/lib/api-client"
 
-const performanceData = [
-  { day: "Mon", collections: 12, incidents: 0 },
-  { day: "Tue", collections: 14, incidents: 1 },
-  { day: "Wed", collections: 11, incidents: 0 },
-  { day: "Thu", collections: 15, incidents: 1 },
-  { day: "Fri", collections: 13, incidents: 0 },
-  { day: "Sat", collections: 9, incidents: 0 },
-]
-
-const todaysTours = [
-  { id: 1, zone: "Downtown District", status: "completed", collections: 12, distance: 8.5 },
-  { id: 2, zone: "Residential Area A", status: "in-progress", collections: 8, distance: 5.2 },
-  { id: 3, zone: "Residential Area B", status: "pending", collections: 10, distance: 6.8 },
-]
+interface Tour {
+  id: string
+  zone: string
+  name: string
+  status: string
+  collections: number
+  distance: number
+}
 
 export default function AgentDashboard() {
+  const [user, setUser] = useState<any>(null)
+  const [tours, setTours] = useState<Tour[]>([])
+  const [stats, setStats] = useState({
+    completedCollections: 0,
+    totalDistance: 0,
+    incidentsThisWeek: 0,
+    efficiency: 0
+  })
+  const [performanceData, setPerformanceData] = useState([
+    { day: "Mon", collections: 0, incidents: 0 },
+    { day: "Tue", collections: 0, incidents: 0 },
+    { day: "Wed", collections: 0, incidents: 0 },
+    { day: "Thu", collections: 0, incidents: 0 },
+    { day: "Fri", collections: 0, incidents: 0 },
+    { day: "Sat", collections: 0, incidents: 0 },
+  ])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        // Get current user
+        const userRes = await getCurrentUser()
+        if (userRes.success && userRes.data) {
+          setUser(userRes.data)
+        } else {
+          // Try localStorage
+          const storedUser = localStorage.getItem("user")
+          if (storedUser) {
+            setUser(JSON.parse(storedUser))
+          }
+        }
+
+        // Fetch tours
+        const toursRes = await fetchTours()
+        if (toursRes.success && toursRes.data) {
+          const toursData = toursRes.data.map((t: any) => ({
+            id: t.id || t.idCollectT,
+            zone: t.zone || t.name || t.nameTour || "Unknown Zone",
+            name: t.name || t.nameTour,
+            status: t.status || t.statusTour || "pending",
+            collections: t.collectionPoints?.length || t.collectPoints?.length || 0,
+            distance: parseFloat(t.distance || t.distanceTour) || 0
+          }))
+          
+          // Show today's tours (limit to 5)
+          setTours(toursData.slice(0, 5))
+          
+          // Calculate stats
+          const completedTours = toursData.filter((t: Tour) => t.status === "completed")
+          const inProgressTour = toursData.find((t: Tour) => t.status === "in-progress")
+          
+          const totalCollections = completedTours.reduce((sum: number, t: Tour) => sum + t.collections, 0)
+          const currentDistance = inProgressTour ? inProgressTour.distance : 0
+          
+          // Calculate efficiency (completed / total * 100)
+          const efficiency = toursData.length > 0 
+            ? Math.round((completedTours.length / toursData.length) * 100) 
+            : 0
+          
+          setStats(prev => ({
+            ...prev,
+            completedCollections: totalCollections,
+            totalDistance: currentDistance,
+            efficiency
+          }))
+          
+          // Generate mock performance data based on tours
+          const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+          const mockPerformance = days.map((day, index) => ({
+            day,
+            collections: Math.floor(Math.random() * 10) + (completedTours.length > 0 ? 5 : 0),
+            incidents: index === 1 || index === 3 ? 1 : 0
+          }))
+          setPerformanceData(mockPerformance)
+        }
+
+        // Fetch incidents
+        const incidentsRes = await fetchIncidents()
+        if (incidentsRes.success && incidentsRes.data) {
+          const openIncidents = incidentsRes.data.filter((i: any) => 
+            i.status === "open" || i.stateIR === "pending"
+          )
+          setStats(prev => ({
+            ...prev,
+            incidentsThisWeek: openIncidents.length
+          }))
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [])
+
+  const formatDate = () => {
+    return new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome, Collection Agent!</h1>
-        <p className="text-foreground/60">December 2, 2025 - Your daily overview</p>
+        <h1 className="text-3xl font-bold text-foreground">
+          Welcome, {user?.name || "Collection Agent"}!
+        </h1>
+        <p className="text-foreground/60">{formatDate()} - Your daily overview</p>
       </div>
 
       {/* Quick Stats */}
@@ -37,7 +149,7 @@ export default function AgentDashboard() {
             <CardTitle className="text-sm font-medium">Completed Collections</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">12</div>
+            <div className="text-3xl font-bold text-primary">{stats.completedCollections}</div>
             <p className="text-xs text-foreground/60 mt-1">Today</p>
           </CardContent>
         </Card>
@@ -47,7 +159,7 @@ export default function AgentDashboard() {
             <CardTitle className="text-sm font-medium">Distance Traveled</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">8.5 km</div>
+            <div className="text-3xl font-bold text-primary">{stats.totalDistance.toFixed(1)} km</div>
             <p className="text-xs text-foreground/60 mt-1">Current tour</p>
           </CardContent>
         </Card>
@@ -57,8 +169,8 @@ export default function AgentDashboard() {
             <CardTitle className="text-sm font-medium">Incidents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">1</div>
-            <p className="text-xs text-foreground/60 mt-1">This week</p>
+            <div className="text-3xl font-bold text-yellow-600">{stats.incidentsThisWeek}</div>
+            <p className="text-xs text-foreground/60 mt-1">Open this week</p>
           </CardContent>
         </Card>
 
@@ -67,8 +179,8 @@ export default function AgentDashboard() {
             <CardTitle className="text-sm font-medium">Efficiency Rating</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-accent">92%</div>
-            <p className="text-xs text-foreground/60 mt-1">↑ 5% vs last week</p>
+            <div className="text-3xl font-bold text-accent">{stats.efficiency}%</div>
+            <p className="text-xs text-foreground/60 mt-1">Tours completed</p>
           </CardContent>
         </Card>
       </div>
@@ -80,25 +192,31 @@ export default function AgentDashboard() {
           <CardDescription>Your scheduled collection routes</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {todaysTours.map((tour) => (
-            <div key={tour.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">{tour.zone}</p>
-                  <p className="text-sm text-foreground/60">
-                    {tour.collections} collections • {tour.distance} km
-                  </p>
-                </div>
-              </div>
-              <StatusBadge
-                status={tour.status === "completed" ? "empty" : tour.status === "in-progress" ? "partial" : "full"}
-                label={tour.status.charAt(0).toUpperCase() + tour.status.slice(1)}
-              />
+          {tours.length === 0 ? (
+            <div className="text-center py-8 text-foreground/60">
+              No tours assigned for today
             </div>
-          ))}
+          ) : (
+            tours.map((tour) => (
+              <div key={tour.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <MapPin className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{tour.zone}</p>
+                    <p className="text-sm text-foreground/60">
+                      {tour.collections} collections • {tour.distance.toFixed(1)} km
+                    </p>
+                  </div>
+                </div>
+                <StatusBadge
+                  status={tour.status === "completed" ? "empty" : tour.status === "in-progress" ? "partial" : "full"}
+                  label={tour.status.charAt(0).toUpperCase() + tour.status.slice(1).replace("-", " ")}
+                />
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

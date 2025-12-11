@@ -1,11 +1,164 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { User, Mail, Phone, Briefcase } from "lucide-react"
+import { User, Mail, Phone, Briefcase, Loader2 } from "lucide-react"
+import { getCurrentUser, updateUser, fetchTours } from "@/lib/api-client"
+
+interface UserProfile {
+  id: string
+  name: string
+  email: string
+  phone: string
+  zone: string
+}
+
+interface WorkStats {
+  toursCompleted: number
+  avgCollections: number
+  efficiency: number
+}
 
 export default function ProfilePage() {
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [workStats, setWorkStats] = useState<WorkStats>({
+    toursCompleted: 0,
+    avgCollections: 0,
+    efficiency: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: ""
+  })
+
+  useEffect(() => {
+    loadProfile()
+  }, [])
+
+  async function loadProfile() {
+    try {
+      // Get current user
+      const userRes = await getCurrentUser()
+      let userData = null
+      
+      if (userRes.success && userRes.data) {
+        userData = userRes.data
+      } else {
+        // Try localStorage
+        const storedUser = localStorage.getItem("user")
+        if (storedUser) {
+          userData = JSON.parse(storedUser)
+        }
+      }
+
+      if (userData) {
+        setUser({
+          id: userData.id || userData.idUser || "",
+          name: userData.name || userData.nameUser || "Collection Agent",
+          email: userData.email || userData.emailUser || "",
+          phone: userData.phone || userData.phoneUser || "",
+          zone: userData.zone || userData.zoneAgent || "Not Assigned"
+        })
+        setFormData({
+          name: userData.name || userData.nameUser || "",
+          email: userData.email || userData.emailUser || "",
+          phone: userData.phone || userData.phoneUser || ""
+        })
+      }
+
+      // Load work stats from tours
+      const toursRes = await fetchTours()
+      if (toursRes.success && toursRes.data) {
+        const tours = toursRes.data
+        const completedTours = tours.filter((t: any) => 
+          t.status === "completed" || t.statusTour === "completed"
+        )
+        
+        const totalCollections = completedTours.reduce((sum: number, t: any) => {
+          const points = t.collectionPoints?.length || t.collectPoints?.length || 0
+          return sum + points
+        }, 0)
+
+        const avgCollections = completedTours.length > 0 
+          ? (totalCollections / completedTours.length).toFixed(1)
+          : "0"
+
+        const efficiency = tours.length > 0
+          ? Math.round((completedTours.length / tours.length) * 100)
+          : 0
+
+        setWorkStats({
+          toursCompleted: completedTours.length,
+          avgCollections: parseFloat(avgCollections),
+          efficiency
+        })
+      }
+    } catch (error) {
+      console.error("Failed to load profile:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSaveProfile() {
+    if (!user) return
+    setSaving(true)
+
+    try {
+      const res = await updateUser(user.id, {
+        name: formData.name,
+        nameUser: formData.name,
+        email: formData.email,
+        emailUser: formData.email,
+        phone: formData.phone,
+        phoneUser: formData.phone
+      })
+
+      if (res.success) {
+        setUser(prev => prev ? {
+          ...prev,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone
+        } : null)
+        
+        // Update localStorage
+        const storedUser = localStorage.getItem("user")
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser)
+          localStorage.setItem("user", JSON.stringify({
+            ...parsed,
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone
+          }))
+        }
+
+        alert("Profile updated successfully!")
+      } else {
+        alert(`Failed to update profile: ${res.error || "Unknown error"}`)
+      }
+    } catch (error) {
+      console.error("Failed to save profile:", error)
+      alert("Failed to save profile")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -26,14 +179,21 @@ export default function ProfilePage() {
                 <User className="w-4 h-4" />
                 Full Name
               </label>
-              <Input defaultValue="Sarah Johnson" />
+              <Input 
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 Email
               </label>
-              <Input type="email" defaultValue="sarah@example.com" />
+              <Input 
+                type="email" 
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -42,17 +202,27 @@ export default function ProfilePage() {
                 <Phone className="w-4 h-4" />
                 Phone
               </label>
-              <Input defaultValue="+1 (555) 234-5678" />
+              <Input 
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Briefcase className="w-4 h-4" />
-                Employee ID
+                Agent ID
               </label>
-              <Input defaultValue="AGENT-0042" disabled />
+              <Input value={user?.id || "N/A"} disabled />
             </div>
           </div>
-          <Button className="w-full md:w-auto">Save Changes</Button>
+          <Button 
+            className="w-full md:w-auto"
+            onClick={handleSaveProfile}
+            disabled={saving}
+          >
+            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Save Changes
+          </Button>
         </CardContent>
       </Card>
 
@@ -66,19 +236,19 @@ export default function ProfilePage() {
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-foreground/60">Assigned Zone</p>
-              <p className="font-medium text-foreground">Residential Area A</p>
+              <p className="font-medium text-foreground">{user?.zone || "Not Assigned"}</p>
             </div>
             <div>
-              <p className="text-sm text-foreground/60">Tours Completed (Month)</p>
-              <p className="font-medium text-foreground">52</p>
+              <p className="text-sm text-foreground/60">Tours Completed (Total)</p>
+              <p className="font-medium text-foreground">{workStats.toursCompleted}</p>
             </div>
             <div>
-              <p className="text-sm text-foreground/60">Average Collections/Day</p>
-              <p className="font-medium text-foreground">12.5</p>
+              <p className="text-sm text-foreground/60">Average Collections/Tour</p>
+              <p className="font-medium text-foreground">{workStats.avgCollections}</p>
             </div>
             <div>
               <p className="text-sm text-foreground/60">Efficiency Rating</p>
-              <p className="font-medium text-foreground text-primary">92%</p>
+              <p className="font-medium text-foreground text-primary">{workStats.efficiency}%</p>
             </div>
           </div>
         </CardContent>
@@ -107,11 +277,10 @@ export default function ProfilePage() {
           <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-secondary/5">
             <input type="checkbox" className="w-4 h-4" />
             <div>
-              <p className="font-medium text-foreground">Marketing</p>
+              <p className="font-medium text-foreground">System Updates</p>
               <p className="text-sm text-foreground/60">Receive news about system updates</p>
             </div>
           </label>
-          <Button className="w-full md:w-auto">Update Preferences</Button>
         </CardContent>
       </Card>
     </div>

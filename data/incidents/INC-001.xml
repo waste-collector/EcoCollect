@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IncidentReport>
+  <idIR>INC-001</idIR>
+  <typeIR>container-problem</typeIR>
+  <descIR>Container at Central Hub is overflowing and needs immediate attention</descIR>
+  <adressIR>1 Central Plaza, Downtown</adressIR>
+  <dateIR>2025-12-10</dateIR>
+  <stateIR>pending</stateIR>
+  <idcitizen>citizen-001</idcitizen>
+  <idCP>CP-003</idCP>
+</IncidentReport>

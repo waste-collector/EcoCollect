@@ -1,44 +1,64 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { v4 as uuidv4 } from "uuid"
+import { XMLStorage } from "@/lib/xml-storage"
+import { XMLConverter } from "@/lib/xml-converter"
+import { XMLValidator } from "@/lib/xml-validator"
 
-const agentsData: any[] = [
-  {
-    id: 1,
-    name: "John Smith",
-    phone: "+1 (555) 123-4567",
-    zone: "Downtown District",
-    toursCompleted: 48,
-    status: "active",
-    email: "john@example.com",
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    phone: "+1 (555) 234-5678",
-    zone: "Residential Area A",
-    toursCompleted: 52,
-    status: "active",
-    email: "sarah@example.com",
-  },
-]
+const RESOURCE_NAME = "agents"
+const SCHEMA_NAME = "CollectAgent"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const zone = searchParams.get("zone")
+    const id = searchParams.get("id")
 
-    let filtered = agentsData
+    // Get single agent
+    if (id) {
+      const result = await XMLStorage.read(RESOURCE_NAME, id)
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: 404 }
+        )
+      }
 
-    if (zone) {
-      filtered = agentsData.filter((a) => a.zone === zone)
+      const jsonData = await XMLValidator.parseXMLToJSON(result.data!)
+      return NextResponse.json({
+        success: true,
+        data: jsonData.CollectAgent
+      })
     }
+
+    // Get all agents
+    const result = await XMLStorage.readAll(RESOURCE_NAME)
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 500 }
+      )
+    }
+
+    const agents = await Promise.all(
+      result.data!.map(async (item) => {
+        const jsonData = await XMLValidator.parseXMLToJSON(item.content)
+        return jsonData.CollectAgent
+      })
+    )
 
     return NextResponse.json({
       success: true,
-      data: filtered,
-      total: filtered.length,
+      data: agents,
+      total: agents.length
     })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to fetch agents" }, { status: 500 })
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to fetch agents",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -46,31 +66,156 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    if (!body.name || !body.email || !body.zone) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    // Validate required fields
+    if (!body.nameU && !body.name) {
+      return NextResponse.json(
+        { success: false, error: "Missing required field: name" },
+        { status: 400 }
+      )
     }
 
-    const newAgent = {
-      id: Math.max(...agentsData.map((a) => a.id), 0) + 1,
-      name: body.name,
-      phone: body.phone || "",
-      zone: body.zone,
-      toursCompleted: 0,
-      status: body.status || "active",
-      email: body.email,
+    if (!body.emailU && !body.email) {
+      return NextResponse.json(
+        { success: false, error: "Missing required field: email" },
+        { status: 400 }
+      )
     }
 
-    agentsData.push(newAgent)
+    // Generate ID if not provided
+    const id = body.idUser || body.id || uuidv4()
+
+    // Check if already exists
+    const exists = await XMLStorage.exists(RESOURCE_NAME, id)
+    if (exists) {
+      return NextResponse.json(
+        { success: false, error: "Agent with this ID already exists" },
+        { status: 409 }
+      )
+    }
+
+    // Convert JSON to XML
+    const xmlContent = XMLConverter.collectAgentToXML({ ...body, id })
+
+    // Save to storage (includes validation)
+    const result = await XMLStorage.save(RESOURCE_NAME, id, xmlContent, SCHEMA_NAME)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 400 }
+      )
+    }
+
+    // Parse back to JSON for response
+    const jsonData = await XMLValidator.parseXMLToJSON(xmlContent)
 
     return NextResponse.json(
       {
         success: true,
         message: "Agent created successfully",
-        data: newAgent,
+        data: jsonData.CollectAgent
       },
-      { status: 201 },
+      { status: 201 }
     )
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to create agent" }, { status: 500 })
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to create agent",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const id = body.idUser || body.id
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing required field: id" },
+        { status: 400 }
+      )
+    }
+
+    // Check if exists
+    const exists = await XMLStorage.exists(RESOURCE_NAME, id)
+    if (!exists) {
+      return NextResponse.json(
+        { success: false, error: "Agent not found" },
+        { status: 404 }
+      )
+    }
+
+    // Convert JSON to XML
+    const xmlContent = XMLConverter.collectAgentToXML({ ...body, id })
+
+    // Update in storage (includes validation)
+    const result = await XMLStorage.update(RESOURCE_NAME, id, xmlContent, SCHEMA_NAME)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 400 }
+      )
+    }
+
+    // Parse back to JSON for response
+    const jsonData = await XMLValidator.parseXMLToJSON(xmlContent)
+
+    return NextResponse.json({
+      success: true,
+      message: "Agent updated successfully",
+      data: jsonData.CollectAgent
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to update agent",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing required parameter: id" },
+        { status: 400 }
+      )
+    }
+
+    const result = await XMLStorage.delete(RESOURCE_NAME, id)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Agent deleted successfully"
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to delete agent",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
   }
 }

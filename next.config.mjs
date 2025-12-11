@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
+  experimental: {
+    turbo: {
+      resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.json']
+    }
   },
-  images: {
-    unoptimized: true,
-  },
+  transpilePackages: ['xml2js', 'fast-xml-parser']
 }
 
 export default nextConfig

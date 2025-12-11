@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Administrator>
+  <idUser>user_9c0334255b23</idUser>
+  <emailU>iyed@iyed.iyed</emailU>
+  <nameU>iyed</nameU>
+  <pwdU>ZWNvY29sbGVjdF9zYWx0X2l5ZWRpeWVk</pwdU>
+  <role>admin</role>
+  <recruitmentDateEmp>2025-12-11</recruitmentDateEmp>
+  <salaryEmp>0</salaryEmp>
+  <telEmp/>
+  <functionAdmin>Administrator</functionAdmin>
+  <createdAt>2025-12-11T17:45:32.650Z</createdAt>
+  <updatedAt>2025-12-11T17:45:32.650Z</updatedAt>
+</Administrator>

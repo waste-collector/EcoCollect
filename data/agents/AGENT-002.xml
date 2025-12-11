@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CollectAgent>
+  <idUser>AGENT-002</idUser>
+  <emailU>fatima@ecocollect.io</emailU>
+  <nameU>Fatima Trabelsi</nameU>
+  <pwdU>c2FsdDphZ2VudDEyMw==</pwdU>
+  <role>agent</role>
+  <recruitmentDateEmp>2024-04-15</recruitmentDateEmp>
+  <salaryEmp>2500</salaryEmp>
+  <telEmp>+216 71 345 678</telEmp>
+  <disponibility>true</disponibility>
+  <roleAgent>driver</roleAgent>
+</CollectAgent>

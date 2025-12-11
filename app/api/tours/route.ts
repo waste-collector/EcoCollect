@@ -1,29 +1,80 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { v4 as uuidv4 } from "uuid"
+import { XMLStorage } from "@/lib/xml-storage"
+import { XMLConverter } from "@/lib/xml-converter"
+import { XMLValidator } from "@/lib/xml-validator"
 
-// In-memory storage for demo (would be database in production)
-const toursData: any[] = []
+const RESOURCE_NAME = "tours"
+const SCHEMA_NAME = "CollectTour"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
     const format = searchParams.get("format") || "json"
 
-    if (format === "xml") {
-      // Generate XML response
-      const xmlContent = generateToursXML(toursData)
-      return new NextResponse(xmlContent, {
-        headers: { "Content-Type": "application/xml" },
+    // Get single tour
+    if (id) {
+      const result = await XMLStorage.read(RESOURCE_NAME, id)
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: 404 }
+        )
+      }
+
+      if (format === "xml") {
+        return new NextResponse(result.data, {
+          headers: { "Content-Type": "application/xml" }
+        })
+      }
+
+      const jsonData = await XMLValidator.parseXMLToJSON(result.data!)
+      return NextResponse.json({
+        success: true,
+        data: jsonData.CollectTour
       })
     }
 
-    // JSON response
+    // Get all tours
+    const result = await XMLStorage.readAll(RESOURCE_NAME)
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 500 }
+      )
+    }
+
+    if (format === "xml") {
+      // Return all tours as XML collection
+      const toursXML = result.data!.map(item => item.content).join("\n")
+      const wrappedXML = `<?xml version="1.0" encoding="utf-8"?>\n<CollectTours>\n${toursXML}\n</CollectTours>`
+      return new NextResponse(wrappedXML, {
+        headers: { "Content-Type": "application/xml" }
+      })
+    }
+
+    const tours = await Promise.all(
+      result.data!.map(async (item) => {
+        const jsonData = await XMLValidator.parseXMLToJSON(item.content)
+        return jsonData.CollectTour
+      })
+    )
+
     return NextResponse.json({
       success: true,
-      data: toursData,
-      total: toursData.length,
+      data: tours,
+      total: tours.length
     })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to fetch tours" }, { status: 500 })
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to fetch tours",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -31,79 +82,149 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    if (!body.name || !body.zone) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+    // Validate required fields
+    if (!body.dateTour && !body.date) {
+      return NextResponse.json(
+        { success: false, error: "Missing required field: date" },
+        { status: 400 }
+      )
     }
 
-    const newTour = {
-      id: `TOUR-${String(toursData.length + 1).padStart(3, "0")}`,
-      name: body.name,
-      zone: body.zone,
-      agent: body.agent,
-      vehicle: body.vehicle,
-      distance: body.distance,
-      duration: body.duration || "2h 0m",
-      status: body.status || "pending",
-      date: body.date || new Date().toISOString().split("T")[0],
-      createdAt: new Date().toISOString(),
+    // Generate ID if not provided
+    const id = body.idTour || body.id || uuidv4()
+
+    // Check if already exists
+    const exists = await XMLStorage.exists(RESOURCE_NAME, id)
+    if (exists) {
+      return NextResponse.json(
+        { success: false, error: "Tour with this ID already exists" },
+        { status: 409 }
+      )
     }
 
-    toursData.push(newTour)
+    // Convert JSON to XML
+    const xmlContent = XMLConverter.collectTourToXML({ ...body, id })
+
+    // Save to storage (includes validation)
+    const result = await XMLStorage.save(RESOURCE_NAME, id, xmlContent, SCHEMA_NAME)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 400 }
+      )
+    }
+
+    // Parse back to JSON for response
+    const jsonData = await XMLValidator.parseXMLToJSON(xmlContent)
 
     return NextResponse.json(
       {
         success: true,
         message: "Tour created successfully",
-        data: newTour,
+        data: jsonData.CollectTour
       },
-      { status: 201 },
+      { status: 201 }
     )
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to create tour" }, { status: 500 })
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to create tour",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
   }
 }
 
-function generateToursXML(tours: any[]): string {
-  const tourElements = tours
-    .map(
-      (tour) => `
-  <tour>
-    <id>${tour.id}</id>
-    <name>${escapeXML(tour.name)}</name>
-    <zone>${escapeXML(tour.zone)}</zone>
-    <agent>${escapeXML(tour.agent)}</agent>
-    <vehicle>${tour.vehicle}</vehicle>
-    <distance>${tour.distance}</distance>
-    <duration>${tour.duration}</duration>
-    <status>${tour.status}</status>
-    <date>${tour.date}</date>
-    <createdAt>${tour.createdAt}</createdAt>
-  </tour>
-    `,
-    )
-    .join("")
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const id = body.idTour || body.id
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<tours>
-${tourElements}
-</tours>`
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing required field: id" },
+        { status: 400 }
+      )
+    }
+
+    // Check if exists
+    const exists = await XMLStorage.exists(RESOURCE_NAME, id)
+    if (!exists) {
+      return NextResponse.json(
+        { success: false, error: "Tour not found" },
+        { status: 404 }
+      )
+    }
+
+    // Convert JSON to XML
+    const xmlContent = XMLConverter.collectTourToXML({ ...body, id })
+
+    // Update in storage (includes validation)
+    const result = await XMLStorage.update(RESOURCE_NAME, id, xmlContent, SCHEMA_NAME)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 400 }
+      )
+    }
+
+    // Parse back to JSON for response
+    const jsonData = await XMLValidator.parseXMLToJSON(xmlContent)
+
+    return NextResponse.json({
+      success: true,
+      message: "Tour updated successfully",
+      data: jsonData.CollectTour
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to update tour",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
+  }
 }
 
-function escapeXML(str: string): string {
-  return str.replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case "<":
-        return "&lt;"
-      case ">":
-        return "&gt;"
-      case "&":
-        return "&amp;"
-      case "'":
-        return "&apos;"
-      case '"':
-        return "&quot;"
-      default:
-        return c
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing required parameter: id" },
+        { status: 400 }
+      )
     }
-  })
+
+    const result = await XMLStorage.delete(RESOURCE_NAME, id)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Tour deleted successfully"
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: "Failed to delete tour",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    )
+  }
 }

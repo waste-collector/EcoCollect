@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Administrator>
+  <idUser>user_05fc7edf4de3</idUser>
+  <emailU>jmal@jmal.jmal</emailU>
+  <nameU>jmal</nameU>
+  <pwdU>ZWNvY29sbGVjdF9zYWx0X2ptYWxqbWFs</pwdU>
+  <role>admin</role>
+  <recruitmentDateEmp>2025-12-11</recruitmentDateEmp>
+  <salaryEmp>0</salaryEmp>
+  <telEmp/>
+  <functionAdmin>Administrator</functionAdmin>
+  <createdAt>2025-12-11T18:17:31.782Z</createdAt>
+  <updatedAt>2025-12-11T18:17:31.782Z</updatedAt>
+</Administrator>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Leaf } from "lucide-react"
+import { signup } from "@/lib/api-client"
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export default function SignupPage() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -40,10 +42,31 @@ export default function SignupPage() {
     }
 
     setLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    setError("")
 
-    // Mock redirect
-    window.location.href = "/login"
+    try {
+      const result = await signup({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        userType: formData.userType,
+      })
+
+      if (!result.success) {
+        setError(result.error || "Signup failed")
+        setLoading(false)
+        return
+      }
+
+      setSuccess(true)
+      // Redirect to login after successful signup
+      setTimeout(() => {
+        window.location.href = "/login"
+      }, 2000)
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+      setLoading(false)
+    }
   }
 
   return (
@@ -67,100 +90,107 @@ export default function SignupPage() {
             <CardDescription>Sign up for EcoCollect</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignup} className="space-y-4">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-foreground">
-                  Full Name
-                </label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="John Doe"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
+            {success ? (
+              <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
+                <p className="text-green-600 font-medium">Account created successfully!</p>
+                <p className="text-sm text-green-600/80 mt-1">Redirecting to login...</p>
               </div>
+            ) : (
+              <form onSubmit={handleSignup} className="space-y-4">
+                {/* Error Message */}
+                {error && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm text-destructive">{error}</p>
+                  </div>
+                )}
 
-              {/* Email */}
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              {/* User Type */}
-              <div className="space-y-2">
-                <label htmlFor="userType" className="text-sm font-medium text-foreground">
-                  I am a
-                </label>
-                <select
-                  id="userType"
-                  name="userType"
-                  value={formData.userType}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="citizen">Citizen</option>
-                  <option value="agent">Collection Agent</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
-                  Confirm Password
-                </label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-                  <p className="text-sm text-destructive">{error}</p>
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-sm font-medium text-foreground">
+                    Full Name
+                  </label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="John Doe"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
-              )}
 
-              {/* Submit Button */}
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Creating account..." : "Create Account"}
-              </Button>
-            </form>
+                {/* Email */}
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium text-foreground">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* User Type */}
+                <div className="space-y-2">
+                  <label htmlFor="userType" className="text-sm font-medium text-foreground">
+                    I am a
+                  </label>
+                  <select
+                    id="userType"
+                    name="userType"
+                    value={formData.userType}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="citizen">Citizen</option>
+                    <option value="agent">Collection Agent</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="********"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="********"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? "Creating account..." : "Create Account"}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
 

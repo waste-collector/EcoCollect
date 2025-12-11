@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Vehicule>
+  <immatV>VEH-004</immatV>
+  <typeV>recycling-truck</typeV>
+  <capacityV>6000</capacityV>
+  <stateV>operational</stateV>
+  <fuelLevelV>95</fuelLevelV>
+  <typeFuelV>Electric</typeFuelV>
+  <emissionCO2>0</emissionCO2>
+  <dateLastMaintenance>2025-10-30</dateLastMaintenance>
+</Vehicule>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Vehicule" type="Vehicule"/>
+  
+  <xs:complexType name="Vehicule">
+    <xs:sequence>
+      <xs:element name="immatV" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="typeV" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="capacityV" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="stateV" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="fuelLevelV" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="typeFuelV" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="emissionCO2" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="dateLastMaintenance" type="xs:date" minOccurs="1" maxOccurs="1"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
