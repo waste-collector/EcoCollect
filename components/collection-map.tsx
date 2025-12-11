@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface CollectionPoint {
-  id: number
+  id: string | number
   name: string
   latitude: number
   longitude: number

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { User, Mail, Phone, Briefcase, Loader2 } from "lucide-react"
 import { getCurrentUser, updateUser, fetchTours } from "@/lib/api-client"
+import type { CollectTour, CollectAgent } from "@/lib/types"
 
 interface UserProfile {
   id: string
@@ -74,13 +75,14 @@ export default function ProfilePage() {
       // Load work stats from tours
       const toursRes = await fetchTours()
       if (toursRes.success && toursRes.data) {
-        const tours = toursRes.data
-        const completedTours = tours.filter((t: any) => 
-          t.status === "completed" || t.statusTour === "completed"
+        const tours = toursRes.data as CollectTour[]
+        const completedTours = tours.filter((t: CollectTour) => 
+          t.statusTour === "completed"
         )
         
-        const totalCollections = completedTours.reduce((sum: number, t: any) => {
-          const points = t.collectionPoints?.length || t.collectPoints?.length || 0
+        const totalCollections = completedTours.reduce((sum: number, t: CollectTour) => {
+          const cpIds = t.idCPs?.idCP
+          const points = Array.isArray(cpIds) ? cpIds.length : cpIds ? 1 : 0
           return sum + points
         }, 0)
 

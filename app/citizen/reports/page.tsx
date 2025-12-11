@@ -16,8 +16,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { fetchIncidents, createIncident, getCurrentUser } from "@/lib/api-client"
+import type { IncidentReport } from "@/lib/types"
 
-interface Report {
+interface DisplayReport {
   id: string
   title: string
   description: string
@@ -28,7 +29,7 @@ interface Report {
 }
 
 export default function ReportsPage() {
-  const [reports, setReports] = useState<Report[]>([])
+  const [reports, setReports] = useState<DisplayReport[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -62,14 +63,14 @@ export default function ReportsPage() {
       // Fetch incidents (optionally filter by citizen ID)
       const res = await fetchIncidents(currentUserId ? { citizenId: currentUserId } : undefined)
       if (res.success && res.data) {
-        const mappedReports: Report[] = res.data.map((i: any) => ({
-          id: i.id || i.idIR,
-          title: i.title || i.titleIR || "Untitled Report",
-          description: i.description || i.descriptionIR || "",
-          zone: i.location || i.locationIR || i.zone || "Unknown Zone",
-          date: (i.timestamp || i.dateIR || new Date().toISOString()).split("T")[0],
-          status: normalizeStatus(i.status || i.stateIR),
-          priority: normalizePriority(i.severity || i.severityIR || i.priority)
+        const mappedReports: DisplayReport[] = res.data.map((i: IncidentReport) => ({
+          id: i.idIR,
+          title: i.typeIR,
+          description: i.descIR,
+          zone: i.adressIR,
+          date: i.dateIR,
+          status: normalizeStatus(i.stateIR),
+          priority: "medium" as const
         }))
         setReports(mappedReports)
       }
@@ -80,14 +81,14 @@ export default function ReportsPage() {
     }
   }
 
-  function normalizeStatus(status: string): Report["status"] {
+  function normalizeStatus(status: string): DisplayReport["status"] {
     const s = (status || "open").toLowerCase()
     if (s === "resolved" || s === "closed" || s === "done") return "resolved"
     if (s === "in-progress" || s === "acknowledged" || s === "pending") return "in-progress"
     return "open"
   }
 
-  function normalizePriority(priority: string): Report["priority"] {
+  function normalizePriority(priority: string): DisplayReport["priority"] {
     const p = (priority || "medium").toLowerCase()
     if (p === "high" || p === "critical") return "high"
     if (p === "low" || p === "minor") return "low"
@@ -120,7 +121,7 @@ export default function ReportsPage() {
       const res = await createIncident(incidentData)
       
       if (res.success) {
-        const newReport: Report = {
+        const newReport: DisplayReport = {
           id: res.data?.id || `RPT-${Date.now()}`,
           title: formData.title,
           description: formData.description,
@@ -144,7 +145,7 @@ export default function ReportsPage() {
     }
   }
 
-  const getStatusIcon = (status: Report["status"]) => {
+  const getStatusIcon = (status: DisplayReport["status"]) => {
     switch (status) {
       case "open":
         return <AlertCircle className="w-5 h-5 text-red-500" />
@@ -155,7 +156,7 @@ export default function ReportsPage() {
     }
   }
 
-  const getStatusLabel = (status: Report["status"]) => {
+  const getStatusLabel = (status: DisplayReport["status"]) => {
     switch (status) {
       case "open":
         return "Open"

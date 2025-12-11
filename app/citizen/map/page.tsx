@@ -5,8 +5,9 @@ import { CollectionMap } from "@/components/collection-map"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { MapPin, Loader2 } from "lucide-react"
 import { fetchCollectionPoints } from "@/lib/api-client"
+import type { CollectPoint } from "@/lib/types"
 
-interface CollectionPoint {
+interface DisplayPoint {
   id: string | number
   name: string
   latitude: number
@@ -16,7 +17,7 @@ interface CollectionPoint {
 }
 
 export default function MapPage() {
-  const [points, setPoints] = useState<CollectionPoint[]>([])
+  const [points, setPoints] = useState<DisplayPoint[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -24,17 +25,17 @@ export default function MapPage() {
       try {
         const res = await fetchCollectionPoints()
         if (res.success && res.data) {
-          const mappedPoints: CollectionPoint[] = res.data.map((p: any) => {
-            const fillLevel = p.fillLevel || Math.floor(Math.random() * 100)
+          const mappedPoints: DisplayPoint[] = res.data.map((p: CollectPoint) => {
+            const fillLevel = p.fillLevel || 0
             let status: "full" | "partial" | "empty" = "empty"
             if (fillLevel >= 80) status = "full"
             else if (fillLevel >= 40) status = "partial"
             
             return {
-              id: p.id || p.idCollectP,
-              name: p.name || p.addressCollectP || `Point ${p.id || p.idCollectP}`,
-              latitude: parseFloat(p.latitude || p.latitudeCollectP) || 36.8065 + (Math.random() * 0.02 - 0.01),
-              longitude: parseFloat(p.longitude || p.longitudeCollectP) || 10.1815 + (Math.random() * 0.02 - 0.01),
+              id: p.idCP,
+              name: p.nameCP || p.adressCP,
+              latitude: p.latitudeGPS || 36.8065,
+              longitude: p.longitudeGPS || 10.1815,
               status,
               fillLevel
             }

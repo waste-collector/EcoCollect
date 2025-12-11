@@ -87,7 +87,7 @@ export default function XMLManagerPage() {
     
     try {
       let data: any[] = []
-      let entityName = entity
+      let entityName: string = entity
       let singularName = entity.slice(0, -1)
       
       switch (entity) {

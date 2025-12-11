@@ -15,22 +15,38 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { Trash2, Edit, Download, Upload, MapPin } from "lucide-react"
-import { fetchTours, createTour, deleteTour, importToursXML, exportToursXML } from "@/lib/api-client"
+import { Trash2, Edit, Download, Upload, MapPin, Plus } from "lucide-react"
+import { fetchTours, createTour, updateTour, deleteTour, importToursXML, exportToursXML } from "@/lib/api-client"
 import type { CollectTour } from "@/lib/types"
 
 export default function ToursPage() {
   const [tours, setTours] = useState<CollectTour[]>([])
   const [loading, setLoading] = useState(true)
-  const [formData, setFormData] = useState({
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingTour, setEditingTour] = useState<CollectTour | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+
+  // Form data for create
+  const [createFormData, setCreateFormData] = useState({
     dateTour: new Date().toISOString().split("T")[0],
     distanceTour: "",
     estimedTimeTour: "02:00",
     immatV: "",
   })
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState("")
+
+  // Form data for edit
+  const [editFormData, setEditFormData] = useState({
+    idTour: "",
+    dateTour: "",
+    statusTour: "",
+    distanceTour: "",
+    estimedTimeTour: "",
+    collectedQuantityTour: "",
+    CO2emissionTour: "",
+    immatV: "",
+  })
 
   useEffect(() => {
     loadTours()
@@ -50,33 +66,85 @@ export default function ToursPage() {
     }
   }
 
-  const handleAddTour = async (e: React.FormEvent) => {
+  const handleCreateTour = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setError("")
 
     try {
       const result = await createTour({
-        dateTour: formData.dateTour,
-        distanceTour: Number.parseFloat(formData.distanceTour),
-        estimedTimeTour: formData.estimedTimeTour,
+        dateTour: createFormData.dateTour,
+        distanceTour: Number.parseFloat(createFormData.distanceTour),
+        estimedTimeTour: createFormData.estimedTimeTour,
         statusTour: "pending",
-        immatV: formData.immatV,
+        immatV: createFormData.immatV,
         collectedQuantityTour: 0,
         CO2emissionTour: 0,
       })
 
       if (result.success) {
-        setFormData({
+        setCreateFormData({
           dateTour: new Date().toISOString().split("T")[0],
           distanceTour: "",
           estimedTimeTour: "02:00",
           immatV: "",
         })
-        setDialogOpen(false)
+        setCreateDialogOpen(false)
         loadTours()
       } else {
         setError(result.error || "Failed to create tour")
+      }
+    } catch (err) {
+      setError("An error occurred")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openEditDialog = (tour: CollectTour) => {
+    setEditingTour(tour)
+    setEditFormData({
+      idTour: tour.idTour,
+      dateTour: tour.dateTour,
+      statusTour: tour.statusTour,
+      distanceTour: String(tour.distanceTour),
+      estimedTimeTour: tour.estimedTimeTour,
+      collectedQuantityTour: String(tour.collectedQuantityTour),
+      CO2emissionTour: String(tour.CO2emissionTour),
+      immatV: tour.immatV || "",
+    })
+    setError("")
+    setEditDialogOpen(true)
+  }
+
+  const handleUpdateTour = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTour) return
+
+    setSubmitting(true)
+    setError("")
+
+    try {
+      const result = await updateTour(editFormData.idTour, {
+        idTour: editFormData.idTour,
+        dateTour: editFormData.dateTour,
+        statusTour: editFormData.statusTour,
+        distanceTour: Number.parseFloat(editFormData.distanceTour),
+        estimedTimeTour: editFormData.estimedTimeTour,
+        collectedQuantityTour: Number.parseFloat(editFormData.collectedQuantityTour),
+        CO2emissionTour: Number.parseFloat(editFormData.CO2emissionTour),
+        immatV: editFormData.immatV,
+        // Preserve existing agents and collection points
+        idClAgents: editingTour.idClAgents,
+        idCPs: editingTour.idCPs,
+      })
+
+      if (result.success) {
+        setEditDialogOpen(false)
+        setEditingTour(null)
+        loadTours()
+      } else {
+        setError(result.error || "Failed to update tour")
       }
     } catch (err) {
       setError("An error occurred")
@@ -153,16 +221,20 @@ export default function ToursPage() {
           <p className="text-foreground/60">Create and manage collection tours</p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          {/* Create Tour Dialog */}
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>Create Tour</Button>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Tour
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Tour</DialogTitle>
                 <DialogDescription>Add a new collection tour</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleAddTour} className="space-y-4">
+              <form onSubmit={handleCreateTour} className="space-y-4">
                 {error && (
                   <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
                     <p className="text-sm text-destructive">{error}</p>
@@ -172,8 +244,8 @@ export default function ToursPage() {
                   <label className="text-sm font-medium text-foreground">Tour Date</label>
                   <Input
                     type="date"
-                    value={formData.dateTour}
-                    onChange={(e) => setFormData({ ...formData, dateTour: e.target.value })}
+                    value={createFormData.dateTour}
+                    onChange={(e) => setCreateFormData({ ...createFormData, dateTour: e.target.value })}
                     required
                   />
                 </div>
@@ -181,8 +253,8 @@ export default function ToursPage() {
                   <label className="text-sm font-medium text-foreground">Vehicle ID</label>
                   <Input
                     placeholder="e.g., VEH-001"
-                    value={formData.immatV}
-                    onChange={(e) => setFormData({ ...formData, immatV: e.target.value })}
+                    value={createFormData.immatV}
+                    onChange={(e) => setCreateFormData({ ...createFormData, immatV: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -191,8 +263,8 @@ export default function ToursPage() {
                     type="number"
                     step="0.1"
                     placeholder="e.g., 12.5"
-                    value={formData.distanceTour}
-                    onChange={(e) => setFormData({ ...formData, distanceTour: e.target.value })}
+                    value={createFormData.distanceTour}
+                    onChange={(e) => setCreateFormData({ ...createFormData, distanceTour: e.target.value })}
                     required
                   />
                 </div>
@@ -200,8 +272,8 @@ export default function ToursPage() {
                   <label className="text-sm font-medium text-foreground">Estimated Time</label>
                   <Input
                     placeholder="e.g., 02:30"
-                    value={formData.estimedTimeTour}
-                    onChange={(e) => setFormData({ ...formData, estimedTimeTour: e.target.value })}
+                    value={createFormData.estimedTimeTour}
+                    onChange={(e) => setCreateFormData({ ...createFormData, estimedTimeTour: e.target.value })}
                     required
                   />
                 </div>
@@ -211,6 +283,7 @@ export default function ToursPage() {
               </form>
             </DialogContent>
           </Dialog>
+
           <Button variant="outline" onClick={handleExportXML}>
             <Download className="w-4 h-4 mr-2" />
             Export XML
@@ -227,6 +300,109 @@ export default function ToursPage() {
         </div>
       </div>
 
+      {/* Edit Tour Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Tour</DialogTitle>
+            <DialogDescription>Update tour details for {editFormData.idTour}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateTour} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Tour Date</label>
+              <Input
+                type="date"
+                value={editFormData.dateTour}
+                onChange={(e) => setEditFormData({ ...editFormData, dateTour: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Status</label>
+              <select
+                value={editFormData.statusTour}
+                onChange={(e) => setEditFormData({ ...editFormData, statusTour: e.target.value })}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                required
+              >
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Vehicle ID</label>
+              <Input
+                placeholder="e.g., VEH-001"
+                value={editFormData.immatV}
+                onChange={(e) => setEditFormData({ ...editFormData, immatV: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Distance (km)</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={editFormData.distanceTour}
+                  onChange={(e) => setEditFormData({ ...editFormData, distanceTour: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Est. Time</label>
+                <Input
+                  placeholder="e.g., 02:30"
+                  value={editFormData.estimedTimeTour}
+                  onChange={(e) => setEditFormData({ ...editFormData, estimedTimeTour: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Collected (kg)</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={editFormData.collectedQuantityTour}
+                  onChange={(e) => setEditFormData({ ...editFormData, collectedQuantityTour: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">CO2 (kg)</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={editFormData.CO2emissionTour}
+                  onChange={(e) => setEditFormData({ ...editFormData, CO2emissionTour: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setEditDialogOpen(false)} 
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1" disabled={submitting}>
+                {submitting ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Loading State */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -238,7 +414,10 @@ export default function ToursPage() {
             <MapPin className="w-12 h-12 mx-auto text-foreground/40 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Tours Yet</h3>
             <p className="text-foreground/60 mb-4">Create your first collection tour to get started</p>
-            <Button onClick={() => setDialogOpen(true)}>Create Tour</Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Tour
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -268,10 +447,20 @@ export default function ToursPage() {
                       status={getStatusBadgeType(tour.statusTour)}
                       label={tour.statusTour.charAt(0).toUpperCase() + tour.statusTour.slice(1).replace("-", " ")}
                     />
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => openEditDialog(tour)}
+                      title="Edit tour"
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteTour(tour.idTour)}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDeleteTour(tour.idTour)}
+                      title="Delete tour"
+                    >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>

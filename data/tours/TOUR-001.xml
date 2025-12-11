@@ -1,19 +1,19 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <CollectTour>
   <idTour>TOUR-001</idTour>
-  <dateTour>2025-12-10</dateTour>
-  <statusTour>completed</statusTour>
+  <dateTour>2025-12-13</dateTour>
+  <statusTour>in-progress</statusTour>
   <distanceTour>12.5</distanceTour>
   <estimedTimeTour>03:30</estimedTimeTour>
   <collectedQuantityTour>2500</collectedQuantityTour>
   <CO2emissionTour>15.2</CO2emissionTour>
   <idClAgents>
-      <idClAgent>AGENT-001</idClAgent>
+    <idClAgent>AGENT-001</idClAgent>
   </idClAgents>
   <idCPs>
-      <idCP>CP-001</idCP>
-      <idCP>CP-002</idCP>
-      <idCP>CP-003</idCP>
+    <idCP>CP-001</idCP>
+    <idCP>CP-002</idCP>
+    <idCP>CP-003</idCP>
   </idCPs>
   <immatV>VEH-002</immatV>
 </CollectTour>

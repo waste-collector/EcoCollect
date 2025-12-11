@@ -16,8 +16,9 @@ import {
 import { StatusBadge } from "@/components/status-badge"
 import { AlertCircle, Clock, Loader2 } from "lucide-react"
 import { fetchIncidents, createIncident, updateIncident } from "@/lib/api-client"
+import type { IncidentReport } from "@/lib/types"
 
-interface Incident {
+interface DisplayIncident {
   id: string
   title: string
   description: string
@@ -30,7 +31,7 @@ interface Incident {
 }
 
 export default function IncidentsPage() {
-  const [incidents, setIncidents] = useState<Incident[]>([])
+  const [incidents, setIncidents] = useState<DisplayIncident[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -38,8 +39,8 @@ export default function IncidentsPage() {
     title: "",
     description: "",
     location: "",
-    type: "other" as Incident["type"],
-    severity: "medium" as Incident["severity"],
+    type: "other" as DisplayIncident["type"],
+    severity: "medium" as DisplayIncident["severity"],
   })
 
   useEffect(() => {
@@ -50,16 +51,16 @@ export default function IncidentsPage() {
     try {
       const res = await fetchIncidents()
       if (res.success && res.data) {
-        const mappedIncidents: Incident[] = res.data.map((i: any) => ({
-          id: i.id || i.idIR,
-          title: i.title || i.titleIR || "Untitled Incident",
-          description: i.description || i.descriptionIR || "",
-          location: i.location || i.locationIR || "Unknown",
-          type: normalizeType(i.type || i.typeIR),
-          severity: normalizeSeverity(i.severity || i.severityIR),
-          status: normalizeStatus(i.status || i.stateIR),
-          timestamp: i.timestamp || i.dateIR || new Date().toISOString(),
-          photos: i.photos || 0
+        const mappedIncidents: DisplayIncident[] = res.data.map((i: IncidentReport) => ({
+          id: i.idIR,
+          title: i.typeIR,
+          description: i.descIR,
+          location: i.adressIR,
+          type: normalizeType(i.typeIR),
+          severity: "medium", // XSD doesn't have severity, default to medium
+          status: normalizeStatus(i.stateIR),
+          timestamp: i.dateIR,
+          photos: 0
         }))
         setIncidents(mappedIncidents)
       }
@@ -70,7 +71,7 @@ export default function IncidentsPage() {
     }
   }
 
-  function normalizeType(type: string): Incident["type"] {
+  function normalizeType(type: string): DisplayIncident["type"] {
     const t = (type || "other").toLowerCase().replace(/\s+/g, "-")
     if (t.includes("vehicle")) return "vehicle-issue"
     if (t.includes("container") || t.includes("overflow")) return "container-problem"
@@ -78,14 +79,7 @@ export default function IncidentsPage() {
     return "other"
   }
 
-  function normalizeSeverity(severity: string): Incident["severity"] {
-    const s = (severity || "medium").toLowerCase()
-    if (s === "high" || s === "critical") return "high"
-    if (s === "low" || s === "minor") return "low"
-    return "medium"
-  }
-
-  function normalizeStatus(status: string): Incident["status"] {
+  function normalizeStatus(status: string): DisplayIncident["status"] {
     const s = (status || "open").toLowerCase()
     if (s === "resolved" || s === "closed" || s === "done") return "resolved"
     if (s === "acknowledged" || s === "in-progress" || s === "pending") return "acknowledged"
@@ -117,7 +111,7 @@ export default function IncidentsPage() {
       const res = await createIncident(incidentData)
       
       if (res.success) {
-        const newIncident: Incident = {
+        const newIncident: DisplayIncident = {
           id: res.data?.id || `INC-${Date.now()}`,
           ...formData,
           status: "open",
@@ -155,7 +149,7 @@ export default function IncidentsPage() {
     }
   }
 
-  const getSeverityColor = (severity: Incident["severity"]) => {
+  const getSeverityColor = (severity: DisplayIncident["severity"]) => {
     switch (severity) {
       case "high":
         return "text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-300"
@@ -166,8 +160,8 @@ export default function IncidentsPage() {
     }
   }
 
-  const getTypeLabel = (type: Incident["type"]) => {
-    const labels: Record<Incident["type"], string> = {
+  const getTypeLabel = (type: DisplayIncident["type"]) => {
+    const labels: Record<DisplayIncident["type"], string> = {
       "vehicle-issue": "Vehicle Issue",
       "container-problem": "Container Problem",
       "route-issue": "Route Issue",
@@ -239,7 +233,7 @@ export default function IncidentsPage() {
                   <select
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as Incident["type"] })}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as DisplayIncident["type"] })}
                   >
                     <option value="vehicle-issue">Vehicle Issue</option>
                     <option value="container-problem">Container Problem</option>
@@ -252,7 +246,7 @@ export default function IncidentsPage() {
                   <select
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                     value={formData.severity}
-                    onChange={(e) => setFormData({ ...formData, severity: e.target.value as Incident["severity"] })}
+                    onChange={(e) => setFormData({ ...formData, severity: e.target.value as DisplayIncident["severity"] })}
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>

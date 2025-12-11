@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/status-badge"
 import { Calendar, MapPin, Loader2 } from "lucide-react"
 import { fetchTours } from "@/lib/api-client"
+import type { CollectTour } from "@/lib/types"
 
 interface Schedule {
   id: string
@@ -27,10 +28,11 @@ export default function SchedulesPage() {
         const res = await fetchTours()
         if (res.success && res.data) {
           // Group tours by zone and create schedule entries
-          const zoneMap = new Map<string, any[]>()
+          const zoneMap: Map<string, CollectTour[]> = new Map()
+          const toursData = res.data as CollectTour[]
           
-          res.data.forEach((tour: any) => {
-            const zone = tour.zone || tour.name || tour.nameTour || "Unknown Zone"
+          toursData.forEach((tour: CollectTour) => {
+            const zone = `Tour ${tour.idTour}`
             if (!zoneMap.has(zone)) {
               zoneMap.set(zone, [])
             }
@@ -41,9 +43,9 @@ export default function SchedulesPage() {
           const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
           
           zoneMap.forEach((tours, zone) => {
-            // Get random schedule info based on tours
-            const pendingTours = tours.filter((t: any) => t.status === "pending" || t.statusTour === "pending")
-            const completedTours = tours.filter((t: any) => t.status === "completed" || t.statusTour === "completed")
+            // Get schedule info based on tours
+            const pendingTours = tours.filter((t: CollectTour) => t.statusTour === "pending")
+            const completedTours = tours.filter((t: CollectTour) => t.statusTour === "completed")
             
             // Create a schedule entry for this zone
             const randomDay1 = days[Math.floor(Math.random() * 5)]
@@ -53,10 +55,10 @@ export default function SchedulesPage() {
               id: `sched-${zone.replace(/\s+/g, "-").toLowerCase()}`,
               zone,
               dayOfWeek: `${randomDay1} & ${randomDay2}`,
-              time: pendingTours[0]?.startTime || pendingTours[0]?.startTimeTour || "09:00 AM - 11:00 AM",
-              nextDate: pendingTours[0]?.date || pendingTours[0]?.dateTour || getNextDate(3),
-              lastCollection: completedTours[0]?.date || completedTours[0]?.dateTour || getNextDate(-3),
-              containerType: tours[0]?.wasteType || "Mixed Waste",
+              time: "09:00 AM - 11:00 AM",
+              nextDate: pendingTours[0]?.dateTour || getNextDate(3),
+              lastCollection: completedTours[0]?.dateTour || getNextDate(-3),
+              containerType: "Mixed Waste",
               status: pendingTours.length > 0 ? "scheduled" : "completed"
             })
           })

@@ -14,18 +14,14 @@ import {
 } from "@/components/ui/dialog"
 import { Clock, Truck, CheckCircle, Loader2 } from "lucide-react"
 import { fetchTours, updateTour } from "@/lib/api-client"
+import type { CollectTour } from "@/lib/types"
 
-interface CollectionPoint {
-  name: string
-  collected: boolean
-}
-
-interface Tour {
+interface DisplayTour {
   id: string
   zone: string
   status: "completed" | "in-progress" | "pending"
   collections: number
-  points: CollectionPoint[]
+  points: { name: string; collected: boolean }[]
   distance: number
   duration: string
   vehicle: string
@@ -35,7 +31,7 @@ interface Tour {
 }
 
 export default function ToursPage() {
-  const [tours, setTours] = useState<Tour[]>([])
+  const [tours, setTours] = useState<DisplayTour[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -47,22 +43,28 @@ export default function ToursPage() {
     try {
       const res = await fetchTours()
       if (res.success && res.data) {
-        const mappedTours: Tour[] = res.data.map((t: any) => ({
-          id: t.id || t.idCollectT,
-          zone: t.zone || t.name || t.nameTour || "Unknown Zone",
-          status: normalizeStatus(t.status || t.statusTour),
-          collections: t.collectionPoints?.length || t.collectPoints?.length || 0,
-          points: (t.collectionPoints || t.collectPoints || []).map((p: any) => ({
-            name: p.name || p.addressCollectP || `Point ${p.id || p.idCollectP}`,
-            collected: p.collected || false
-          })),
-          distance: parseFloat(t.distance || t.distanceTour) || 0,
-          duration: formatDuration(t.duration || t.durationTour),
-          vehicle: t.vehicle || t.vehicleId || "N/A",
-          date: t.date || t.dateTour || new Date().toISOString().split("T")[0],
-          startTime: t.startTime || t.startTimeTour || "09:00 AM",
-          endTime: t.endTime || t.endTimeTour
-        }))
+        const mappedTours: DisplayTour[] = res.data.map((t: CollectTour) => {
+          // Extract collection point IDs
+          const cpIds = t.idCPs?.idCP
+          const cpArray = Array.isArray(cpIds) ? cpIds : cpIds ? [cpIds] : []
+          
+          return {
+            id: t.idTour,
+            zone: `Tour ${t.idTour}`,
+            status: normalizeStatus(t.statusTour),
+            collections: cpArray.length,
+            points: cpArray.map((cpId: string) => ({
+              name: cpId,
+              collected: t.statusTour === "completed"
+            })),
+            distance: t.distanceTour || 0,
+            duration: t.estimedTimeTour || "0h 0m",
+            vehicle: t.immatV || "N/A",
+            date: t.dateTour,
+            startTime: "09:00 AM",
+            endTime: t.statusTour === "completed" ? "05:00 PM" : undefined
+          }
+        })
         setTours(mappedTours)
       }
     } catch (error) {
@@ -77,15 +79,6 @@ export default function ToursPage() {
     if (s === "completed" || s === "done") return "completed"
     if (s === "in-progress" || s === "inprogress" || s === "active") return "in-progress"
     return "pending"
-  }
-
-  function formatDuration(duration: any): string {
-    if (!duration) return "0h 0m"
-    if (typeof duration === "string" && duration.includes("h")) return duration
-    const mins = parseInt(duration) || 0
-    const hours = Math.floor(mins / 60)
-    const remainingMins = mins % 60
-    return `${hours}h ${remainingMins}m`
   }
 
   async function handleStartTour(tourId: string) {

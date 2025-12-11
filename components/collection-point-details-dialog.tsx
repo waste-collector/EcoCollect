@@ -69,7 +69,7 @@ export function CollectionPointDetailsDialog({ point }: CollectionPointDetailsDi
                                 <h3 className="font-semibold text-sm text-foreground mb-1">Location</h3>
                                 <p className="text-sm text-foreground/70">{point.zone}</p>
                                 <p className="text-xs text-foreground/50 font-mono">
-                                    {Number.parseFloat(point.latitude).toFixed(4)}, {Number.parseFloat(point.longitude).toFixed(4)}
+                                    {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
                                 </p>
                             </div>
                         </div>

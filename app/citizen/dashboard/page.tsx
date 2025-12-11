@@ -9,16 +9,17 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { AlertCircle, MapPin, Calendar, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { fetchCollectionPoints, fetchTours, getCurrentUser } from "@/lib/api-client"
+import type { CollectPoint, CollectTour } from "@/lib/types"
 
-interface CollectionPoint {
+interface DisplayPoint {
   id: string
   name: string
-  distance: number
+  distance: string
   status: "empty" | "partial" | "full"
   fillLevel: number
 }
 
-interface Collection {
+interface DisplayCollection {
   id: string
   zone: string
   date: string
@@ -35,9 +36,9 @@ const wasteStats = [
 ]
 
 export default function CitizenDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [nearbyPoints, setNearbyPoints] = useState<CollectionPoint[]>([])
-  const [nextCollections, setNextCollections] = useState<Collection[]>([])
+  const [user, setUser] = useState<{ name?: string; zone?: string; address?: string } | null>(null)
+  const [nearbyPoints, setNearbyPoints] = useState<DisplayPoint[]>([])
+  const [nextCollections, setNextCollections] = useState<DisplayCollection[]>([])
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -58,15 +59,15 @@ export default function CitizenDashboard() {
         // Fetch collection points
         const pointsRes = await fetchCollectionPoints()
         if (pointsRes.success && pointsRes.data) {
-          const mappedPoints: CollectionPoint[] = pointsRes.data.slice(0, 5).map((p: any, index: number) => {
-            const fillLevel = p.fillLevel || Math.floor(Math.random() * 100)
+          const mappedPoints: DisplayPoint[] = pointsRes.data.slice(0, 5).map((p: CollectPoint, index: number) => {
+            const fillLevel = p.fillLevel || 0
             let status: "empty" | "partial" | "full" = "empty"
             if (fillLevel >= 80) status = "full"
             else if (fillLevel >= 40) status = "partial"
             
             return {
-              id: p.id || p.idCollectP,
-              name: p.name || p.addressCollectP || `Point ${index + 1}`,
+              id: p.idCP,
+              name: p.nameCP || p.adressCP || `Point ${index + 1}`,
               distance: (Math.random() * 2).toFixed(1),
               status,
               fillLevel
@@ -86,15 +87,15 @@ export default function CitizenDashboard() {
         // Fetch tours for upcoming collections
         const toursRes = await fetchTours()
         if (toursRes.success && toursRes.data) {
-          const pendingTours = toursRes.data
-            .filter((t: any) => t.status === "pending" || t.statusTour === "pending")
+          const pendingTours = (toursRes.data as CollectTour[])
+            .filter((t: CollectTour) => t.statusTour === "pending")
             .slice(0, 3)
           
-          const mappedCollections: Collection[] = pendingTours.map((t: any) => ({
-            id: t.id || t.idCollectT,
-            zone: t.zone || t.name || t.nameTour || "Unknown Zone",
-            date: t.date || t.dateTour || new Date().toISOString().split("T")[0],
-            time: t.startTime || t.startTimeTour || "09:00 AM"
+          const mappedCollections: DisplayCollection[] = pendingTours.map((t: CollectTour) => ({
+            id: t.idTour,
+            zone: `Tour ${t.idTour}`,
+            date: t.dateTour,
+            time: "09:00 AM"
           }))
           setNextCollections(mappedCollections)
         }

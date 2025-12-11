@@ -8,8 +8,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { MapPin, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { fetchTours, fetchIncidents, getCurrentUser } from "@/lib/api-client"
+import type { CollectTour, IncidentReport } from "@/lib/types"
 
-interface Tour {
+interface DisplayTour {
   id: string
   zone: string
   name: string
@@ -19,8 +20,8 @@ interface Tour {
 }
 
 export default function AgentDashboard() {
-  const [user, setUser] = useState<any>(null)
-  const [tours, setTours] = useState<Tour[]>([])
+  const [user, setUser] = useState<{ name?: string } | null>(null)
+  const [tours, setTours] = useState<DisplayTour[]>([])
   const [stats, setStats] = useState({
     completedCollections: 0,
     totalDistance: 0,
@@ -55,23 +56,28 @@ export default function AgentDashboard() {
         // Fetch tours
         const toursRes = await fetchTours()
         if (toursRes.success && toursRes.data) {
-          const toursData = toursRes.data.map((t: any) => ({
-            id: t.id || t.idCollectT,
-            zone: t.zone || t.name || t.nameTour || "Unknown Zone",
-            name: t.name || t.nameTour,
-            status: t.status || t.statusTour || "pending",
-            collections: t.collectionPoints?.length || t.collectPoints?.length || 0,
-            distance: parseFloat(t.distance || t.distanceTour) || 0
-          }))
+          const toursData: DisplayTour[] = toursRes.data.map((t: CollectTour) => {
+            const cpIds = t.idCPs?.idCP
+            const cpArray = Array.isArray(cpIds) ? cpIds : cpIds ? [cpIds] : []
+            
+            return {
+              id: t.idTour,
+              zone: `Tour ${t.idTour}`,
+              name: t.idTour,
+              status: t.statusTour || "pending",
+              collections: cpArray.length,
+              distance: t.distanceTour || 0
+            }
+          })
           
           // Show today's tours (limit to 5)
           setTours(toursData.slice(0, 5))
           
           // Calculate stats
-          const completedTours = toursData.filter((t: Tour) => t.status === "completed")
-          const inProgressTour = toursData.find((t: Tour) => t.status === "in-progress")
+          const completedTours = toursData.filter((t: DisplayTour) => t.status === "completed")
+          const inProgressTour = toursData.find((t: DisplayTour) => t.status === "in-progress")
           
-          const totalCollections = completedTours.reduce((sum: number, t: Tour) => sum + t.collections, 0)
+          const totalCollections = completedTours.reduce((sum: number, t: DisplayTour) => sum + t.collections, 0)
           const currentDistance = inProgressTour ? inProgressTour.distance : 0
           
           // Calculate efficiency (completed / total * 100)
@@ -99,8 +105,8 @@ export default function AgentDashboard() {
         // Fetch incidents
         const incidentsRes = await fetchIncidents()
         if (incidentsRes.success && incidentsRes.data) {
-          const openIncidents = incidentsRes.data.filter((i: any) => 
-            i.status === "open" || i.stateIR === "pending"
+          const openIncidents = incidentsRes.data.filter((i: IncidentReport) => 
+            i.stateIR === "open" || i.stateIR === "pending"
           )
           setStats(prev => ({
             ...prev,
