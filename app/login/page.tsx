@@ -119,13 +119,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-secondary/10 rounded-lg space-y-2">
-              <p className="text-sm font-medium text-foreground">Demo Credentials:</p>
-              <p className="text-xs text-foreground/60">Admin: admin@ecocollect.io / admin123</p>
-              <p className="text-xs text-foreground/60">Agent: agent@ecocollect.io / agent123</p>
-              <p className="text-xs text-foreground/60">Citizen: citizen@ecocollect.io / citizen123</p>
-            </div>
           </CardContent>
         </Card>
 

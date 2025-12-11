@@ -139,65 +139,6 @@ export default function ProfilePage() {
         <p className="text-foreground/60">Manage your account information</p>
       </div>
 
-      {/* Personal Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>Update your profile details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Full Name
-              </label>
-              <Input 
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email
-              </label>
-              <Input 
-                type="email" 
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone
-              </label>
-              <Input 
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Zone
-              </label>
-              <Input value={user?.zone || "Not Set"} disabled />
-            </div>
-          </div>
-          <Button 
-            className="w-full md:w-auto"
-            onClick={handleSaveProfile}
-            disabled={saving}
-          >
-            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Save Changes
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Preferences */}
       <Card>
@@ -240,12 +181,6 @@ export default function ProfilePage() {
         <CardContent className="space-y-3">
           <Button variant="outline" onClick={handleLogout}>
             Sign Out
-          </Button>
-          <Button
-            variant="outline"
-            className="border-destructive/20 text-destructive hover:bg-destructive/10 bg-transparent"
-          >
-            Delete Account
           </Button>
         </CardContent>
       </Card>

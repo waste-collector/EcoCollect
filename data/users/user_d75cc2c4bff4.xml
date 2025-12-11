@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Citizen>
+  <idUser>user_d75cc2c4bff4</idUser>
+  <emailU>test@test.test</emailU>
+  <nameU>test</nameU>
+  <pwdU>ZWNvY29sbGVjdF9zYWx0X3Rlc3R0ZXN0</pwdU>
+  <role>citizen</role>
+  <adressCit/>
+  <phoneCit>23344750</phoneCit>
+  <zoneCit>Downtown District</zoneCit>
+  <createdAt>2025-12-11T18:36:07.467Z</createdAt>
+  <updatedAt>2025-12-11T19:01:42.345Z</updatedAt>
+</Citizen>

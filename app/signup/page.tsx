@@ -148,8 +148,6 @@ export default function SignupPage() {
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="citizen">Citizen</option>
-                    <option value="agent">Collection Agent</option>
-                    <option value="admin">Administrator</option>
                   </select>
                 </div>
 
