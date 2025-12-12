@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectPoint>
+  <idCP>c721073f-773c-4e21-a364-16ea3ce39865</idCP>
+  <nameCP>PointX</nameCP>
+  <adressCP>Hay el ons</adressCP>
+  <latitudeGPS>28.8065</latitudeGPS>
+  <longitudeGPS>10.1815</longitudeGPS>
+  <capacityCP>300</capacityCP>
+  <fillLevel>0</fillLevel>
+  <wasteType>recyclable</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-12</lastCollectDate>
+</CollectPoint>

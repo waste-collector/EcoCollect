@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectTour>
+  <idTour>4b23bdc9-4450-4bd7-8fbd-33a2cd63fc2c</idTour>
+  <dateTour>2025-12-11</dateTour>
+  <statusTour>pending</statusTour>
+  <distanceTour>150</distanceTour>
+  <estimedTimeTour>02:00</estimedTimeTour>
+  <collectedQuantityTour>0</collectedQuantityTour>
+  <CO2emissionTour>0</CO2emissionTour>
+  <immatV>V-005</immatV>
+</CollectTour>

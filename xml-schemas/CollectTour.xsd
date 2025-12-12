@@ -1,16 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:element name="CollectTour" type="CollectTour"/>
-  
-  <xs:complexType name="CollectTour">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:veh="Vehicule.xsd"
+           xmlns:agent="CollectAgent.xsd"
+           >
+
+  <xs:element name="CollectTours">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="CollectTour" type="CollectTourType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+
+    <xs:key name="CollectTourIDKey">
+      <xs:selector xpath="CollectTour"/>
+      <xs:field xpath="idTour"/>
+    </xs:key>
+  </xs:element>
+
+  <xs:complexType name="CollectTourType">
     <xs:sequence>
-      <xs:element name="idTour" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="dateTour" type="xs:date" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="statusTour" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="distanceTour" type="xs:double" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="estimedTimeTour" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="collectedQuantityTour" type="xs:double" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="CO2emissionTour" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="idTour" type="xs:string"/>
+      <xs:element name="dateTour" type="xs:date"/>
+      <xs:element name="statusTour">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="pending"/>
+            <xs:enumeration value="in progress"/>
+            <xs:enumeration value="done"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="distanceTour" type="xs:double" default="0"/>
+      <xs:element name="estimedTimeTour" type="xs:string" default=""/>
+      <xs:element name="collectedQuantityTour" type="xs:double" default="0"/>
+      <xs:element name="CO2emissionTour" type="xs:double" default="0"/>
       <xs:element name="idClAgents" minOccurs="0" maxOccurs="1">
         <xs:complexType>
           <xs:sequence>
@@ -28,4 +51,15 @@
       <xs:element name="immatV" type="xs:string" minOccurs="0" maxOccurs="1"/>
     </xs:sequence>
   </xs:complexType>
+
+  <xs:keyref name="CollectAgentFK" refer="agent:CollectAgentIDKey">
+    <xs:selector xpath="CollectTour/idClAgents/idClAgent"/>
+    <xs:field xpath="."/>
+  </xs:keyref>
+
+  <xs:keyref name="VehiculeFK" refer="veh:VehiculeIDKey">
+    <xs:selector xpath="CollectTour/immatV"/>
+    <xs:field xpath="."/>
+  </xs:keyref>
+
 </xs:schema>

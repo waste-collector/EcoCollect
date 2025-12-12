@@ -1,21 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:include schemaLocation="common.xsd"/>
-  
-  <xs:element name="CollectAgent" type="CollectAgent"/>
-  
-  <xs:complexType name="CollectAgent">
+
+  <xs:element name="CollectAgents">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="CollectAgent" type="CollectAgentType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+
+    <xs:key name="CollectAgentIDKey">
+      <xs:selector xpath="CollectAgent"/>
+      <xs:field xpath="idUser"/>
+    </xs:key>
+  </xs:element>
+
+  <xs:complexType name="CollectAgentType">
     <xs:sequence>
       <xs:element name="idUser" type="xs:string"/>
-      <xs:element name="emailU" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="nameU" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="pwdU" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="role" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="recruitmentDateEmp" type="xs:date" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="salaryEmp" type="xs:double" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="telEmp" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="disponibility" type="xs:boolean" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="roleAgent" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="emailU" type="xs:string"/>
+      <xs:element name="nameU" type="xs:string"/>
+      <xs:element name="pwdU" type="xs:string"/>
+      <xs:element name="role" type="xs:string"/>
+      <xs:element name="recruitmentDateEmp" type="xs:date"/>
+      <xs:element name="salaryEmp" type="xs:double"/>
+      <xs:element name="telEmp" type="xs:string"/>
+      <xs:element name="disponibility" type="xs:boolean"/>
+      <xs:element name="roleAgent" type="xs:string"/>
     </xs:sequence>
   </xs:complexType>
+
 </xs:schema>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectPoint>
+    <idCP>CP004</idCP>
+    <nameCP>ISIMS</nameCP>
+    <adressCP>123 Main Street, Sfax</adressCP>
+    <latitudeGPS>36.8065</latitudeGPS>
+    <longitudeGPS>10.1815</longitudeGPS>
+    <capacityCP>400</capacityCP>
+    <wasteType>Plastic</wasteType>
+    <lastCollectDate>2025-12-10</lastCollectDate>
+</CollectPoint>

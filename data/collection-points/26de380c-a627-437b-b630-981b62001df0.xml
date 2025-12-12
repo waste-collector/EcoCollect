@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CollectPoint>
+  <idCP>26de380c-a627-437b-b630-981b62001df0</idCP>
+  <nameCP>PointTest1</nameCP>
+  <adressCP>Sakiet Ezzit</adressCP>
+  <latitudeGPS>40.7128</latitudeGPS>
+  <longitudeGPS>-74.006</longitudeGPS>
+  <capacityCP>250</capacityCP>
+  <fillLevel>0</fillLevel>
+  <wasteType>mixed</wasteType>
+  <priorityCP>1</priorityCP>
+  <lastCollectDate>2025-12-12</lastCollectDate>
+</CollectPoint>

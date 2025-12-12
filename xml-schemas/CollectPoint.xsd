@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <xs:element name="CollectPoint" type="CollectPoint"/>
-  
   <xs:complexType name="CollectPoint">
     <xs:sequence>
       <xs:element name="idCP" type="xs:string" minOccurs="1" maxOccurs="1"/>
@@ -10,10 +9,32 @@
       <xs:element name="latitudeGPS" type="xs:double" minOccurs="1" maxOccurs="1"/>
       <xs:element name="longitudeGPS" type="xs:double" minOccurs="1" maxOccurs="1"/>
       <xs:element name="capacityCP" type="xs:double" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="fillLevel" type="xs:double" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="wasteType" type="xs:string" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="priorityCP" type="xs:int" minOccurs="1" maxOccurs="1"/>
-      <xs:element name="lastCollectDate" type="xs:date" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="fillLevel" type="xs:double" default="0"/>
+      <xs:element name="wasteType">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="mixed"/>
+            <xs:enumeration value="recyclable"/>
+            <xs:enumeration value="organic"/>
+            <xs:enumeration value="plastic"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="priorityCP" type="xs:int" default="0"/>
+      <xs:element name="lastCollectDate" type="xs:date" default="2025-12-12"/>
     </xs:sequence>
   </xs:complexType>
+
+  <xs:element name="CollectPoints">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="CollectPoint" type="CollectPoint" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+    <xs:key name="CollectPointIDKey">
+      <xs:selector xpath="CollectPoint"/>
+      <xs:field xpath="idCP"/>
+    </xs:key>
+  </xs:element>
+
 </xs:schema>
