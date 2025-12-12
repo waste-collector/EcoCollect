@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { MapPin, Loader2, Plus, Pencil, Trash2 } from "lucide-react"
 import { fetchCollectionPoints, createCollectionPoint, updateCollectionPoint, deleteCollectionPoint } from "@/lib/api-client"
 import type { CollectPoint } from "@/lib/types"
+import CollectionPointMapPicker from "@/components/collection-point-map-picker";
 
 export default function CollectionPointsPage() {
     const [points, setPoints] = useState<CollectPoint[]>([])
@@ -189,27 +190,13 @@ export default function CollectionPointsPage() {
                     required
                 />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Latitude</label>
-                    <Input
-                        type="number"
-                        step="any"
-                        value={formData.latitudeGPS}
-                        onChange={(e) => setFormData({ ...formData, latitudeGPS: Number(e.target.value) })}
-                        required
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Longitude</label>
-                    <Input
-                        type="number"
-                        step="any"
-                        value={formData.longitudeGPS}
-                        onChange={(e) => setFormData({ ...formData, longitudeGPS: Number(e.target.value) })}
-                        required
-                    />
-                </div>
+            <div>
+                <CollectionPointMapPicker 
+                    handleMapClick={(lat, lng) => { setFormData({ ...formData, latitudeGPS: lat, longitudeGPS: lng }) }}
+                    lat={formData.latitudeGPS}
+                    lng={formData.longitudeGPS}
+
+                />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -382,10 +369,9 @@ export default function CollectionPointsPage() {
                                         </div>
                                         <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                                             <div
-                                                className={`h-full transition-all ${
-                                                    point.fillLevel >= 80 ? "bg-red-500" : 
+                                                className={`h-full transition-all ${point.fillLevel >= 80 ? "bg-red-500" : 
                                                     point.fillLevel >= 40 ? "bg-yellow-500" : "bg-green-500"
-                                                }`}
+                                                    }`}
                                                 style={{ width: `${point.fillLevel}%` }}
                                             />
                                         </div>
