@@ -5,20 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Users, Plus, Trash2 } from "lucide-react"
-import { fetchAgents, createAgent, deleteAgent } from "@/lib/api-client"
+import { Users, Plus, Trash2, Pencil } from "lucide-react"
+import { fetchAgents, createAgent, updateAgent, deleteAgent } from "@/lib/api-client"
 import type { CollectAgent } from "@/lib/types"
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<CollectAgent[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedAgent, setSelectedAgent] = useState<CollectAgent | null>(null)
   const [formData, setFormData] = useState({
     nameU: "",
     emailU: "",
     telEmp: "",
     pwdU: "",
     roleAgent: "collector",
+    disponibility: true,
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -41,6 +44,18 @@ export default function AgentsPage() {
     }
   }
 
+  const resetForm = () => {
+    setFormData({
+      nameU: "",
+      emailU: "",
+      telEmp: "",
+      pwdU: "",
+      roleAgent: "collector",
+      disponibility: true,
+    })
+    setError("")
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -53,21 +68,67 @@ export default function AgentsPage() {
         telEmp: formData.telEmp,
         pwdU: formData.pwdU,
         roleAgent: formData.roleAgent,
-        disponibility: true,
+        disponibility: formData.disponibility,
       })
 
       if (result.success) {
         setDialogOpen(false)
-        setFormData({
-          nameU: "",
-          emailU: "",
-          telEmp: "",
-          pwdU: "",
-          roleAgent: "collector",
-        })
+        resetForm()
         loadAgents()
       } else {
         setError(result.error || "Failed to create agent")
+      }
+    } catch (err) {
+      setError("An error occurred")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleEdit = (agent: CollectAgent) => {
+    setSelectedAgent(agent)
+    setFormData({
+      nameU: agent.nameU || "",
+      emailU: agent.emailU || "",
+      telEmp: agent.telEmp || "",
+      pwdU: "",
+      roleAgent: agent.roleAgent || "collector",
+      disponibility: agent.disponibility === true || agent.disponibility === "true" as unknown as boolean,
+    })
+    setEditDialogOpen(true)
+    setError("")
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedAgent) return
+
+    setSubmitting(true)
+    setError("")
+
+    try {
+      const updateData: any = {
+        nameU: formData.nameU,
+        emailU: formData.emailU,
+        telEmp: formData.telEmp,
+        roleAgent: formData.roleAgent,
+        disponibility: formData.disponibility,
+      }
+      
+      // Only include password if it was changed
+      if (formData.pwdU) {
+        updateData.pwdU = formData.pwdU
+      }
+
+      const result = await updateAgent(selectedAgent.idUser, updateData)
+
+      if (result.success) {
+        setEditDialogOpen(false)
+        setSelectedAgent(null)
+        resetForm()
+        loadAgents()
+      } else {
+        setError(result.error || "Failed to update agent")
       }
     } catch (err) {
       setError("An error occurred")
@@ -91,6 +152,94 @@ export default function AgentsPage() {
 
   const activeAgents = agents.filter((a) => a.disponibility === true || a.disponibility === "true" as unknown as boolean)
 
+  // Inline form JSX to avoid focus loss issue (component re-creation on each render)
+  const renderAgentForm = (onSubmit: (e: React.FormEvent) => Promise<void>, isEdit: boolean = false) => (
+    <form onSubmit={onSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Full Name</label>
+        <Input
+          value={formData.nameU}
+          onChange={(e) => setFormData({ ...formData, nameU: e.target.value })}
+          placeholder="John Smith"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Email</label>
+        <Input
+          type="email"
+          value={formData.emailU}
+          onChange={(e) => setFormData({ ...formData, emailU: e.target.value })}
+          placeholder="agent@ecocollect.io"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Phone</label>
+        <Input
+          value={formData.telEmp}
+          onChange={(e) => setFormData({ ...formData, telEmp: e.target.value })}
+          placeholder="+216 71 123 456"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">{isEdit ? "Password (leave blank to keep current)" : "Password"}</label>
+        <Input
+          type="password"
+          value={formData.pwdU}
+          onChange={(e) => setFormData({ ...formData, pwdU: e.target.value })}
+          placeholder="********"
+          required={!isEdit}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Role</label>
+        <select
+          value={formData.roleAgent}
+          onChange={(e) => setFormData({ ...formData, roleAgent: e.target.value })}
+          className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+        >
+          <option value="collector">Collector</option>
+          <option value="driver">Driver</option>
+          <option value="supervisor">Supervisor</option>
+        </select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Availability</label>
+        <select
+          value={formData.disponibility ? "true" : "false"}
+          onChange={(e) => setFormData({ ...formData, disponibility: e.target.value === "true" })}
+          className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+        >
+          <option value="true">Available</option>
+          <option value="false">Unavailable</option>
+        </select>
+      </div>
+      <div className="flex gap-2 pt-2">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => {
+            isEdit ? setEditDialogOpen(false) : setDialogOpen(false)
+            resetForm()
+          }} 
+          className="flex-1"
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={submitting} className="flex-1">
+          {submitting ? (isEdit ? "Saving..." : "Creating...") : (isEdit ? "Save Changes" : "Create Agent")}
+        </Button>
+      </div>
+    </form>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -98,7 +247,7 @@ export default function AgentsPage() {
           <h1 className="text-3xl font-bold text-foreground">Collection Agents</h1>
           <p className="text-foreground/60">Manage collection team members</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -109,71 +258,7 @@ export default function AgentsPage() {
             <DialogHeader>
               <DialogTitle>Add New Agent</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-                  <p className="text-sm text-destructive">{error}</p>
-                </div>
-              )}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name</label>
-                <Input
-                  value={formData.nameU}
-                  onChange={(e) => setFormData({ ...formData, nameU: e.target.value })}
-                  placeholder="John Smith"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Email</label>
-                <Input
-                  type="email"
-                  value={formData.emailU}
-                  onChange={(e) => setFormData({ ...formData, emailU: e.target.value })}
-                  placeholder="agent@ecocollect.io"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Phone</label>
-                <Input
-                  value={formData.telEmp}
-                  onChange={(e) => setFormData({ ...formData, telEmp: e.target.value })}
-                  placeholder="+216 71 123 456"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Password</label>
-                <Input
-                  type="password"
-                  value={formData.pwdU}
-                  onChange={(e) => setFormData({ ...formData, pwdU: e.target.value })}
-                  placeholder="********"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Role</label>
-                <select
-                  value={formData.roleAgent}
-                  onChange={(e) => setFormData({ ...formData, roleAgent: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                >
-                  <option value="collector">Collector</option>
-                  <option value="driver">Driver</option>
-                  <option value="supervisor">Supervisor</option>
-                </select>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={submitting} className="flex-1">
-                  {submitting ? "Creating..." : "Create Agent"}
-                </Button>
-              </div>
-            </form>
+            {renderAgentForm(handleSubmit)}
           </DialogContent>
         </Dialog>
       </div>
@@ -233,12 +318,12 @@ export default function AgentsPage() {
                   </div>
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${
-                      agent.disponibility
+                      agent.disponibility === true || agent.disponibility === "true" as unknown as boolean
                         ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                         : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
                     }`}
                   >
-                    {agent.disponibility ? "Available" : "Unavailable"}
+                    {agent.disponibility === true || agent.disponibility === "true" as unknown as boolean ? "Available" : "Unavailable"}
                   </span>
                 </div>
 
@@ -258,8 +343,9 @@ export default function AgentsPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 bg-transparent">
-                    View Profile
+                  <Button variant="outline" className="flex-1 bg-transparent" onClick={() => handleEdit(agent)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
                   </Button>
                   <Button
                     variant="outline"
@@ -275,6 +361,16 @@ export default function AgentsPage() {
           ))}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) { setSelectedAgent(null); resetForm(); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Agent</DialogTitle>
+          </DialogHeader>
+          {renderAgentForm(handleEditSubmit, true)}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

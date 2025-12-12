@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <CollectTour>
   <idTour>TOUR-002</idTour>
   <dateTour>2025-12-11</dateTour>
@@ -8,11 +8,11 @@
   <collectedQuantityTour>800</collectedQuantityTour>
   <CO2emissionTour>8.5</CO2emissionTour>
   <idClAgents>
-      <idClAgent>AGENT-002</idClAgent>
+    <idClAgent>AGENT-002</idClAgent>
   </idClAgents>
   <idCPs>
-      <idCP>CP-004</idCP>
-      <idCP>CP-005</idCP>
+    <idCP>CP-004</idCP>
+    <idCP>CP-005</idCP>
   </idCPs>
-  <immatV>VEH-004</immatV>
+  <immatV>VEH-005</immatV>
 </CollectTour>

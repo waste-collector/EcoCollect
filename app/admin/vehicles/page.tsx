@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { Plus, Trash2, Truck } from "lucide-react"
-import { fetchVehicles, createVehicle, deleteVehicle } from "@/lib/api-client"
+import { Plus, Trash2, Truck, Pencil } from "lucide-react"
+import { fetchVehicles, createVehicle, updateVehicle, deleteVehicle } from "@/lib/api-client"
 import type { Vehicule } from "@/lib/types"
 
 export default function VehiclesPage() {
     const [vehicles, setVehicles] = useState<Vehicule[]>([])
     const [loading, setLoading] = useState(true)
     const [dialogOpen, setDialogOpen] = useState(false)
+    const [editDialogOpen, setEditDialogOpen] = useState(false)
+    const [selectedVehicle, setSelectedVehicle] = useState<Vehicule | null>(null)
     const [formData, setFormData] = useState({
         immatV: "",
         typeV: "Truck",
@@ -21,6 +23,8 @@ export default function VehiclesPage() {
         typeFuelV: "Diesel",
         fuelLevelV: 100,
         stateV: "operational",
+        emissionCO2: 0,
+        dateLastMaintenance: new Date().toISOString().split("T")[0],
     })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState("")
@@ -43,6 +47,20 @@ export default function VehiclesPage() {
         }
     }
 
+    const resetForm = () => {
+        setFormData({
+            immatV: "",
+            typeV: "Truck",
+            capacityV: 5000,
+            typeFuelV: "Diesel",
+            fuelLevelV: 100,
+            stateV: "operational",
+            emissionCO2: 0,
+            dateLastMaintenance: new Date().toISOString().split("T")[0],
+        })
+        setError("")
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setSubmitting(true)
@@ -56,21 +74,65 @@ export default function VehiclesPage() {
                 typeFuelV: formData.typeFuelV,
                 fuelLevelV: formData.fuelLevelV,
                 stateV: formData.stateV,
+                emissionCO2: formData.emissionCO2,
+                dateLastMaintenance: formData.dateLastMaintenance,
             })
 
             if (result.success) {
                 setDialogOpen(false)
-                setFormData({
-                    immatV: "",
-                    typeV: "Truck",
-                    capacityV: 5000,
-                    typeFuelV: "Diesel",
-                    fuelLevelV: 100,
-                    stateV: "operational",
-                })
+                resetForm()
                 loadVehicles()
             } else {
                 setError(result.error || "Failed to create vehicle")
+            }
+        } catch (err) {
+            setError("An error occurred")
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleEdit = (vehicle: Vehicule) => {
+        setSelectedVehicle(vehicle)
+        setFormData({
+            immatV: vehicle.immatV || "",
+            typeV: vehicle.typeV || "Truck",
+            capacityV: vehicle.capacityV || 5000,
+            typeFuelV: vehicle.typeFuelV || "Diesel",
+            fuelLevelV: vehicle.fuelLevelV || 100,
+            stateV: vehicle.stateV || "operational",
+            emissionCO2: vehicle.emissionCO2 || 0,
+            dateLastMaintenance: vehicle.dateLastMaintenance || new Date().toISOString().split("T")[0],
+        })
+        setEditDialogOpen(true)
+        setError("")
+    }
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!selectedVehicle) return
+
+        setSubmitting(true)
+        setError("")
+
+        try {
+            const result = await updateVehicle(selectedVehicle.immatV, {
+                typeV: formData.typeV,
+                capacityV: formData.capacityV,
+                typeFuelV: formData.typeFuelV,
+                fuelLevelV: formData.fuelLevelV,
+                stateV: formData.stateV,
+                emissionCO2: formData.emissionCO2,
+                dateLastMaintenance: formData.dateLastMaintenance,
+            })
+
+            if (result.success) {
+                setEditDialogOpen(false)
+                setSelectedVehicle(null)
+                resetForm()
+                loadVehicles()
+            } else {
+                setError(result.error || "Failed to update vehicle")
             }
         } catch (err) {
             setError("An error occurred")
@@ -95,6 +157,115 @@ export default function VehiclesPage() {
     const operationalVehicles = vehicles.filter((v) => v.stateV === "operational")
     const maintenanceVehicles = vehicles.filter((v) => v.stateV === "maintenance")
 
+    // Inline form JSX to avoid focus loss issue (component re-creation on each render)
+    const renderVehicleForm = (onSubmit: (e: React.FormEvent) => Promise<void>, isEdit: boolean = false) => (
+        <form onSubmit={onSubmit} className="space-y-4">
+            {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm text-destructive">{error}</p>
+                </div>
+            )}
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Registration Number</label>
+                <Input
+                    value={formData.immatV}
+                    onChange={(e) => setFormData({ ...formData, immatV: e.target.value })}
+                    placeholder="VEH-007"
+                    required
+                    disabled={isEdit}
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Type/Model</label>
+                <Input
+                    value={formData.typeV}
+                    onChange={(e) => setFormData({ ...formData, typeV: e.target.value })}
+                    placeholder="Mercedes Actros"
+                    required
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Capacity (kg)</label>
+                <Input
+                    type="number"
+                    value={formData.capacityV}
+                    onChange={(e) => setFormData({ ...formData, capacityV: Number(e.target.value) })}
+                    required
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Fuel Type</label>
+                <select
+                    value={formData.typeFuelV}
+                    onChange={(e) => setFormData({ ...formData, typeFuelV: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                >
+                    <option value="Diesel">Diesel</option>
+                    <option value="Petrol">Petrol</option>
+                    <option value="Electric">Electric</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="CNG">CNG</option>
+                </select>
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Fuel Level (%)</label>
+                <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.fuelLevelV}
+                    onChange={(e) => setFormData({ ...formData, fuelLevelV: Number(e.target.value) })}
+                    required
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <select
+                    value={formData.stateV}
+                    onChange={(e) => setFormData({ ...formData, stateV: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                >
+                    <option value="operational">Operational</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="out-of-service">Out of Service</option>
+                </select>
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">CO2 Emission</label>
+                <Input
+                    type="number"
+                    min="0"
+                    value={formData.emissionCO2}
+                    onChange={(e) => setFormData({ ...formData, emissionCO2: Number(e.target.value) })}
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Last Maintenance Date</label>
+                <Input
+                    type="date"
+                    value={formData.dateLastMaintenance}
+                    onChange={(e) => setFormData({ ...formData, dateLastMaintenance: e.target.value })}
+                />
+            </div>
+            <div className="flex gap-2 pt-2">
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                        isEdit ? setEditDialogOpen(false) : setDialogOpen(false)
+                        resetForm()
+                    }} 
+                    className="flex-1"
+                >
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={submitting} className="flex-1">
+                    {submitting ? (isEdit ? "Saving..." : "Creating...") : (isEdit ? "Save Changes" : "Create Vehicle")}
+                </Button>
+            </div>
+        </form>
+    )
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -102,96 +273,18 @@ export default function VehiclesPage() {
                     <h1 className="text-3xl font-bold text-foreground">Vehicle Fleet</h1>
                     <p className="text-foreground/60">Monitor vehicle status and performance</p>
                 </div>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
                     <DialogTrigger asChild>
                         <Button>
                             <Plus className="w-4 h-4 mr-2" />
                             Add Vehicle
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Add New Vehicle</DialogTitle>
                         </DialogHeader>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && (
-                                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-                                    <p className="text-sm text-destructive">{error}</p>
-                                </div>
-                            )}
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Registration Number</label>
-                                <Input
-                                    value={formData.immatV}
-                                    onChange={(e) => setFormData({ ...formData, immatV: e.target.value })}
-                                    placeholder="VEH-007"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Type/Model</label>
-                                <Input
-                                    value={formData.typeV}
-                                    onChange={(e) => setFormData({ ...formData, typeV: e.target.value })}
-                                    placeholder="Mercedes Actros"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Capacity (kg)</label>
-                                <Input
-                                    type="number"
-                                    value={formData.capacityV}
-                                    onChange={(e) => setFormData({ ...formData, capacityV: Number(e.target.value) })}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Fuel Type</label>
-                                <select
-                                    value={formData.typeFuelV}
-                                    onChange={(e) => setFormData({ ...formData, typeFuelV: e.target.value })}
-                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                                >
-                                    <option value="Diesel">Diesel</option>
-                                    <option value="Petrol">Petrol</option>
-                                    <option value="Electric">Electric</option>
-                                    <option value="Hybrid">Hybrid</option>
-                                    <option value="CNG">CNG</option>
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Fuel Level (%)</label>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    value={formData.fuelLevelV}
-                                    onChange={(e) => setFormData({ ...formData, fuelLevelV: Number(e.target.value) })}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Status</label>
-                                <select
-                                    value={formData.stateV}
-                                    onChange={(e) => setFormData({ ...formData, stateV: e.target.value })}
-                                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                                >
-                                    <option value="operational">Operational</option>
-                                    <option value="maintenance">Maintenance</option>
-                                    <option value="out-of-service">Out of Service</option>
-                                </select>
-                            </div>
-                            <div className="flex gap-2 pt-2">
-                                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={submitting} className="flex-1">
-                                    {submitting ? "Creating..." : "Create Vehicle"}
-                                </Button>
-                            </div>
-                        </form>
+                        {renderVehicleForm(handleSubmit)}
                     </DialogContent>
                 </Dialog>
             </div>
@@ -278,14 +371,23 @@ export default function VehiclesPage() {
                                                 <td className="py-3 px-4">{vehicle.fuelLevelV}%</td>
                                                 <td className="py-3 px-4">{vehicle.capacityV}</td>
                                                 <td className="py-3 px-4">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-destructive hover:text-destructive"
-                                                        onClick={() => handleDelete(vehicle.immatV)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleEdit(vehicle)}
+                                                        >
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-destructive hover:text-destructive"
+                                                            onClick={() => handleDelete(vehicle.immatV)}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )
@@ -296,6 +398,16 @@ export default function VehiclesPage() {
                     </CardContent>
                 </Card>
             )}
+
+            {/* Edit Dialog */}
+            <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) { setSelectedVehicle(null); resetForm(); } }}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Vehicle</DialogTitle>
+                    </DialogHeader>
+                    {renderVehicleForm(handleEditSubmit, true)}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

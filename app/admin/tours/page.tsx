@@ -50,6 +50,7 @@ export default function ToursPage() {
 
   useEffect(() => {
     loadTours()
+    console.log(tours)
   }, [])
 
   async function loadTours() {
@@ -445,7 +446,6 @@ export default function ToursPage() {
                   <div className="flex flex-col gap-2 items-end">
                     <StatusBadge
                       status={getStatusBadgeType(tour.statusTour)}
-                      label={tour.statusTour.charAt(0).toUpperCase() + tour.statusTour.slice(1).replace("-", " ")}
                     />
                     <Button 
                       variant="ghost" 

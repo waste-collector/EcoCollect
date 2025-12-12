@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, Download, Loader2, CheckCircle, XCircle } from "lucide-react"
@@ -10,7 +10,9 @@ import {
   fetchAgents, 
   fetchCollectionPoints,
   importToursXML,
-  exportToursXML 
+  importVehiclesXML,
+  importAgentsXML,
+  importCollectionPointsXML
 } from "@/lib/api-client"
 
 interface XMLOperation {
@@ -178,25 +180,13 @@ export default function XMLManagerPage() {
           result = await importToursXML(xmlInput)
           break
         case "vehicles":
-          result = await fetch("/api/vehicles/import", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ xmlContent: xmlInput })
-          }).then(r => r.json())
+          result = await importVehiclesXML(xmlInput)
           break
         case "agents":
-          result = await fetch("/api/agents/import", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ xmlContent: xmlInput })
-          }).then(r => r.json())
+          result = await importAgentsXML(xmlInput)
           break
         case "collection-points":
-          result = await fetch("/api/collection-points/import", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ xmlContent: xmlInput })
-          }).then(r => r.json())
+          result = await importCollectionPointsXML(xmlInput)
           break
       }
 

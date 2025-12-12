@@ -4,7 +4,7 @@ import type React from "react"
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Leaf, LogOut, Menu, BarChart3, Truck, MapPin, Users } from "lucide-react"
+import { LogOut, Menu, BarChart3, Truck, MapPin, Users, FileText } from "lucide-react"
 import { useState } from "react"
 
 export default function AdminLayout({
@@ -62,6 +62,13 @@ export default function AdminLayout({
             Agents
           </Link>
           <Link
+            href="/admin/users"
+            className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Users
+          </Link>
+          <Link
             href="/admin/xml-manager"
             className="block px-4 py-2 rounded-lg hover:bg-primary/10 text-foreground transition flex items-center gap-2"
           >
@@ -99,5 +106,3 @@ export default function AdminLayout({
     </div>
   )
 }
-
-import { FileText } from "lucide-react"

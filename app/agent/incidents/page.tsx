@@ -14,8 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { AlertCircle, Clock, Loader2 } from "lucide-react"
-import { fetchIncidents, createIncident, updateIncident } from "@/lib/api-client"
+import { AlertCircle, Clock, Loader2, Trash2 } from "lucide-react"
+import { fetchIncidents, createIncident, updateIncident, deleteIncident } from "@/lib/api-client"
 import type { IncidentReport } from "@/lib/types"
 
 interface DisplayIncident {
@@ -146,6 +146,23 @@ export default function IncidentsPage() {
       }
     } catch (error) {
       console.error("Failed to acknowledge incident:", error)
+    }
+  }
+
+  const handleDelete = async (incidentId: string) => {
+    if (!confirm("Are you sure you want to delete this incident?")) return
+
+    try {
+      const res = await deleteIncident(incidentId)
+      
+      if (res.success) {
+        setIncidents(prev => prev.filter(i => i.id !== incidentId))
+      } else {
+        alert(res.error || "Failed to delete incident")
+      }
+    } catch (error) {
+      console.error("Failed to delete incident:", error)
+      alert("Failed to delete incident")
     }
   }
 
@@ -338,15 +355,25 @@ export default function IncidentsPage() {
                       }
                       label={incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
                     />
-                    {incident.status === "open" && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleAcknowledge(incident.id)}
+                    <div className="flex items-center gap-2">
+                      {incident.status === "open" && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleAcknowledge(incident.id)}
+                        >
+                          Acknowledge
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="text-destructive hover:text-destructive h-8 w-8"
+                        onClick={() => handleDelete(incident.id)}
                       >
-                        Acknowledge
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    )}
+                    </div>
                   </div>
                 </div>
               </CardContent>

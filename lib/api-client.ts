@@ -277,6 +277,44 @@ export async function deleteIncident(id: string) {
   return response.json()
 }
 
+// ============ Import/Export API ============
+
+export async function importVehiclesXML(xmlContent: string) {
+  const response = await fetch("/api/vehicles/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ xmlContent }),
+  })
+  return response.json()
+}
+
+export async function importAgentsXML(xmlContent: string) {
+  const response = await fetch("/api/agents/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ xmlContent }),
+  })
+  return response.json()
+}
+
+export async function importCollectionPointsXML(xmlContent: string) {
+  const response = await fetch("/api/collection-points/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ xmlContent }),
+  })
+  return response.json()
+}
+
+export async function exportCollectionPointsXML(ids?: string[]) {
+  const response = await fetch("/api/collection-points/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  })
+  return response.json()
+}
+
 // ============ Stats API ============
 
 export async function fetchStats() {
