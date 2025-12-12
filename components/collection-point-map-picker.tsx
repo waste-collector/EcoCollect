@@ -46,14 +46,6 @@ export function CollectionPointMapPicker({
                 />
             </div>
 
-
-            {/* Confirm Button */}
-            <Button
-                type="button"
-                className="w-full"
-            >
-                Confirm Location
-            </Button>
         </div>
     )
 }
