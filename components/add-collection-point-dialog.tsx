@@ -22,8 +22,8 @@ export function AddCollectionPointDialog({ onSuccess }: AddCollectionPointDialog
     zone: "Downtown District",
     capacity: 100,
     fillLevel: 0,
-    latitude: 40.7128,
-    longitude: -74.006,
+    latitude: 34.7406,
+    longitude: 10.7603,
   })
 
   const zones = ["Downtown District", "Residential Area A", "Residential Area B"]
@@ -59,8 +59,8 @@ export function AddCollectionPointDialog({ onSuccess }: AddCollectionPointDialog
           zone: "Downtown District",
           capacity: 100,
           fillLevel: 0,
-          latitude: 40.7128,
-          longitude: -74.006,
+          latitude: 34.7406,
+          longitude: 10.7603,
         })
         if (onSuccess) onSuccess()
       } else {
