@@ -12,10 +12,10 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { Clock, Truck, CheckCircle, Loader2 } from "lucide-react"
-import { fetchTours, updateTour } from "@/lib/api-client"
-import type { CollectTour } from "@/lib/types"
-import { toFixed } from "@/lib/utils";
+import { Clock, Truck, CheckCircle, Loader2, UserCheck } from "lucide-react"
+import { fetchTours, updateTour, fetchVehicles, fetchAgents } from "@/lib/api-client"
+import type { CollectTour, Vehicule, CollectAgent } from "@/lib/types"
+import { toFixed } from "@/lib/utils"
 
 interface DisplayTour {
     id: string
@@ -26,6 +26,9 @@ interface DisplayTour {
     distance: number
     duration: string
     vehicle: string
+    vehicleDetails?: Vehicule
+    agentIds: string[]
+    agentDetails: CollectAgent[]
     date: string
     startTime: string
     endTime?: string
@@ -33,21 +36,46 @@ interface DisplayTour {
 
 export default function ToursPage() {
     const [tours, setTours] = useState<DisplayTour[]>([])
+    const [vehicles, setVehicles] = useState<Vehicule[]>([])
+    const [agents, setAgents] = useState<CollectAgent[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
 
     useEffect(() => {
-        loadTours()
+        loadData()
     }, [])
 
-    async function loadTours() {
+    async function loadData() {
         try {
-            const res = await fetchTours()
-            if (res.success && res.data) {
-                const mappedTours: DisplayTour[] = res.data.map((t: CollectTour) => {
+            const [toursRes, vehiclesRes, agentsRes] = await Promise.all([
+                fetchTours(),
+                fetchVehicles(),
+                fetchAgents(),
+            ])
+
+            const vehiclesData = vehiclesRes.success && vehiclesRes.data ? vehiclesRes.data : []
+            const agentsData = agentsRes.success && agentsRes.data ? agentsRes.data : []
+
+            setVehicles(vehiclesData)
+            setAgents(agentsData)
+
+            if (toursRes.success && toursRes.data) {
+                const mappedTours: DisplayTour[] = toursRes.data.map((t: CollectTour) => {
                     // Extract collection point IDs
                     const cpIds = t.idCPs?.idCP
                     const cpArray = Array.isArray(cpIds) ? cpIds : cpIds ? [cpIds] : []
+
+                    // Extract agent IDs
+                    const agentIdsRaw = t.idClAgents?.idClAgent
+                    const agentIds = Array.isArray(agentIdsRaw) ? agentIdsRaw : agentIdsRaw ? [agentIdsRaw] : []
+
+                    // Get vehicle details
+                    const vehicleDetails = vehiclesData.find((v: Vehicule) => v.immatV === t.immatV)
+
+                    // Get agent details
+                    const agentDetails = agentIds
+                        .map((id: string) => agentsData.find((a: CollectAgent) => a.idUser === id))
+                        .filter(Boolean) as CollectAgent[]
           
                     return {
                         id: t.idTour,
@@ -61,6 +89,9 @@ export default function ToursPage() {
                         distance: t.distanceTour || 0,
                         duration: t.estimedTimeTour || "0h 0m",
                         vehicle: t.immatV || "N/A",
+                        vehicleDetails: vehicleDetails,
+                        agentIds: agentIds,
+                        agentDetails: agentDetails,
                         date: t.dateTour,
                         startTime: "09:00 AM",
                         endTime: t.statusTour === "completed" ? "05:00 PM" : undefined
@@ -69,7 +100,7 @@ export default function ToursPage() {
                 setTours(mappedTours)
             }
         } catch (error) {
-            console.error("Failed to load tours:", error)
+            console.error("Failed to load data:", error)
         } finally {
             setLoading(false)
         }
@@ -201,21 +232,51 @@ export default function ToursPage() {
                                 <Card className="cursor-pointer hover:border-primary/50 transition">
                                     <CardContent className="pt-6">
                                         <div className="flex items-start justify-between">
-                                            <div className="flex-1 space-y-2">
+                                            <div className="flex-1 space-y-3">
                                                 <div className="flex items-center gap-2">
                                                     <h3 className="font-semibold text-foreground">{tour.zone}</h3>
                                                     <span className="text-xs bg-muted px-2 py-1 rounded">{tour.id}</span>
                                                 </div>
+
+                                                {/* Vehicle Info */}
+                                                <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-2 rounded-lg">
+                                                    <Truck className="w-4 h-4 text-primary" />
+                                                    <span className="font-medium">Vehicle:</span>
+                                                    {tour.vehicleDetails ? (
+                                                        <span>
+                                                            {tour.vehicleDetails.immatV} - {tour.vehicleDetails.typeV} ({tour.vehicleDetails.capacityV}kg)
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-destructive">{tour.vehicle}</span>
+                                                    )}
+                                                </div>
+
+                                                {/* Agents Info */}
+                                                <div className="flex items-start gap-2 text-sm bg-muted/50 px-3 py-2 rounded-lg">
+                                                    <UserCheck className="w-4 h-4 text-primary mt-0.5" />
+                                                    <div className="flex-1">
+                                                        <span className="font-medium">Team:</span>
+                                                        {tour.agentDetails.length > 0 ? (
+                                                            <div className="mt-1 space-y-0.5">
+                                                                {tour.agentDetails.map((agent) => (
+                                                                    <div key={agent.idUser} className="text-xs">
+                                                                        {agent.nameU} - {agent.roleAgent}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-destructive ml-1">No agents assigned</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 <div className="grid md:grid-cols-2 gap-4 text-sm text-foreground/60">
                                                     <div className="flex items-center gap-2">
                                                         <Clock className="w-4 h-4" />
                                                         {tour.startTime} {tour.endTime ? `- ${tour.endTime}` : ""}
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Truck className="w-4 h-4" />
-                                                        Vehicle {tour.vehicle}
-                                                    </div>
                                                     <div>Distance: {toFixed(tour.distance, 1)} km</div>
+                                                    <div>Duration: {tour.duration}</div>
                                                     <div>Points: {tour.collections}</div>
                                                 </div>
                                             </div>
@@ -237,6 +298,57 @@ export default function ToursPage() {
                                     <DialogDescription>{tour.id}</DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
+                                    {/* Vehicle Details */}
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium text-foreground">Vehicle</p>
+                                        <div className="p-3 bg-muted/50 rounded-lg">
+                                            {tour.vehicleDetails ? (
+                                                <div className="space-y-1 text-sm">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-foreground/60">ID:</span>
+                                                        <span className="font-medium">{tour.vehicleDetails.immatV}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-foreground/60">Type:</span>
+                                                        <span className="font-medium">{tour.vehicleDetails.typeV}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-foreground/60">Capacity:</span>
+                                                        <span className="font-medium">{tour.vehicleDetails.capacityV}kg</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-foreground/60">Status:</span>
+                                                        <span className="font-medium">{tour.vehicleDetails.stateV}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-destructive">{tour.vehicle}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Team Members */}
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium text-foreground">Team Members</p>
+                                        <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                                            {tour.agentDetails.length > 0 ? (
+                                                tour.agentDetails.map((agent) => (
+                                                    <div key={agent.idUser} className="flex items-center gap-2 pb-2 border-b border-border last:border-0 last:pb-0">
+                                                        <UserCheck className="w-4 h-4 text-primary" />
+                                                        <div className="flex-1 text-sm">
+                                                            <div className="font-medium">{agent.nameU}</div>
+                                                            <div className="text-xs text-foreground/60">
+                                                                {agent.roleAgent} - {agent.idUser}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-destructive">No team members assigned</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div className="space-y-2">
                                         <p className="text-sm font-medium text-foreground">Collection Points</p>
                                         <div className="space-y-2 max-h-48 overflow-y-auto">

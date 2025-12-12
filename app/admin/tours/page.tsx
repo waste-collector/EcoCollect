@@ -15,12 +15,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { Trash2, Edit, Download, Upload, MapPin, Plus } from "lucide-react"
-import { fetchTours, createTour, updateTour, deleteTour, importToursXML, exportToursXML } from "@/lib/api-client"
-import type { CollectTour } from "@/lib/types"
+import { Trash2, Edit, Download, Upload, MapPin, Plus, UserCheck, Truck } from "lucide-react"
+import { fetchTours, createTour, updateTour, deleteTour, importToursXML, exportToursXML, fetchVehicles, fetchAgents } from "@/lib/api-client"
+import type { CollectTour, Vehicule, CollectAgent } from "@/lib/types"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export default function ToursPage() {
   const [tours, setTours] = useState<CollectTour[]>([])
+  const [vehicles, setVehicles] = useState<Vehicule[]>([])
+  const [agents, setAgents] = useState<CollectAgent[]>([])
   const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -34,6 +37,7 @@ export default function ToursPage() {
     distanceTour: "",
     estimedTimeTour: "02:00",
     immatV: "",
+    agentIds: [] as string[],
   })
 
   // Form data for edit
@@ -46,15 +50,39 @@ export default function ToursPage() {
     collectedQuantityTour: "",
     CO2emissionTour: "",
     immatV: "",
+    agentIds: [] as string[],
   })
 
   useEffect(() => {
-    loadTours()
-    console.log(tours)
+    loadData()
   }, [])
 
-  async function loadTours() {
+  async function loadData() {
     setLoading(true)
+    try {
+      const [toursResult, vehiclesResult, agentsResult] = await Promise.all([
+        fetchTours(),
+        fetchVehicles(),
+        fetchAgents(),
+      ])
+      
+      if (toursResult.success && toursResult.data) {
+        setTours(toursResult.data)
+      }
+      if (vehiclesResult.success && vehiclesResult.data) {
+        setVehicles(vehiclesResult.data)
+      }
+      if (agentsResult.success && agentsResult.data) {
+        setAgents(agentsResult.data)
+      }
+    } catch (err) {
+      console.error("Failed to load data:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadTours() {
     try {
       const result = await fetchTours()
       if (result.success && result.data) {
@@ -62,8 +90,6 @@ export default function ToursPage() {
       }
     } catch (err) {
       console.error("Failed to load tours:", err)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -72,6 +98,19 @@ export default function ToursPage() {
     setSubmitting(true)
     setError("")
 
+    // Validate required fields
+    if (!createFormData.immatV) {
+      setError("Please select a vehicle")
+      setSubmitting(false)
+      return
+    }
+
+    if (createFormData.agentIds.length === 0) {
+      setError("Please select at least one agent")
+      setSubmitting(false)
+      return
+    }
+
     try {
       const result = await createTour({
         dateTour: createFormData.dateTour,
@@ -79,6 +118,7 @@ export default function ToursPage() {
         estimedTimeTour: createFormData.estimedTimeTour,
         statusTour: "pending",
         immatV: createFormData.immatV,
+        agentIds: createFormData.agentIds,
         collectedQuantityTour: 0,
         CO2emissionTour: 0,
       })
@@ -89,6 +129,7 @@ export default function ToursPage() {
           distanceTour: "",
           estimedTimeTour: "02:00",
           immatV: "",
+          agentIds: [],
         })
         setCreateDialogOpen(false)
         loadTours()
@@ -104,6 +145,17 @@ export default function ToursPage() {
 
   const openEditDialog = (tour: CollectTour) => {
     setEditingTour(tour)
+    
+    // Extract agent IDs from the tour
+    let agentIds: string[] = []
+    if (tour.idClAgents) {
+      if (Array.isArray(tour.idClAgents.idClAgent)) {
+        agentIds = tour.idClAgents.idClAgent
+      } else if (tour.idClAgents.idClAgent) {
+        agentIds = [tour.idClAgents.idClAgent]
+      }
+    }
+
     setEditFormData({
       idTour: tour.idTour,
       dateTour: tour.dateTour,
@@ -113,6 +165,7 @@ export default function ToursPage() {
       collectedQuantityTour: String(tour.collectedQuantityTour),
       CO2emissionTour: String(tour.CO2emissionTour),
       immatV: tour.immatV || "",
+      agentIds: agentIds,
     })
     setError("")
     setEditDialogOpen(true)
@@ -125,6 +178,19 @@ export default function ToursPage() {
     setSubmitting(true)
     setError("")
 
+    // Validate required fields
+    if (!editFormData.immatV) {
+      setError("Please select a vehicle")
+      setSubmitting(false)
+      return
+    }
+
+    if (editFormData.agentIds.length === 0) {
+      setError("Please select at least one agent")
+      setSubmitting(false)
+      return
+    }
+
     try {
       const result = await updateTour(editFormData.idTour, {
         idTour: editFormData.idTour,
@@ -135,8 +201,8 @@ export default function ToursPage() {
         collectedQuantityTour: Number.parseFloat(editFormData.collectedQuantityTour),
         CO2emissionTour: Number.parseFloat(editFormData.CO2emissionTour),
         immatV: editFormData.immatV,
-        // Preserve existing agents and collection points
-        idClAgents: editingTour.idClAgents,
+        agentIds: editFormData.agentIds,
+        // Preserve existing collection points
         idCPs: editingTour.idCPs,
       })
 
@@ -214,6 +280,43 @@ export default function ToursPage() {
     return "full"
   }
 
+  const toggleAgentSelection = (agentId: string, isCreate: boolean) => {
+    if (isCreate) {
+      setCreateFormData(prev => ({
+        ...prev,
+        agentIds: prev.agentIds.includes(agentId)
+          ? prev.agentIds.filter(id => id !== agentId)
+          : [...prev.agentIds, agentId]
+      }))
+    } else {
+      setEditFormData(prev => ({
+        ...prev,
+        agentIds: prev.agentIds.includes(agentId)
+          ? prev.agentIds.filter(id => id !== agentId)
+          : [...prev.agentIds, agentId]
+      }))
+    }
+  }
+
+  const getVehicleDetails = (immatV?: string) => {
+    if (!immatV) return null
+    return vehicles.find(v => v.immatV === immatV)
+  }
+
+  const getAgentDetails = (agentId: string) => {
+    return agents.find(a => a.idUser === agentId)
+  }
+
+  const getTourAgents = (tour: CollectTour): CollectAgent[] => {
+    if (!tour.idClAgents) return []
+    
+    const agentIds = Array.isArray(tour.idClAgents.idClAgent)
+      ? tour.idClAgents.idClAgent
+      : tour.idClAgents.idClAgent ? [tour.idClAgents.idClAgent] : []
+    
+    return agentIds.map(id => getAgentDetails(id)).filter(Boolean) as CollectAgent[]
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -230,7 +333,7 @@ export default function ToursPage() {
                 Create Tour
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Tour</DialogTitle>
                 <DialogDescription>Add a new collection tour</DialogDescription>
@@ -250,33 +353,77 @@ export default function ToursPage() {
                     required
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Vehicle ID</label>
-                  <Input
-                    placeholder="e.g., VEH-001"
+                  <label className="text-sm font-medium text-foreground">
+                    Vehicle <span className="text-destructive">*</span>
+                  </label>
+                  <select
                     value={createFormData.immatV}
                     onChange={(e) => setCreateFormData({ ...createFormData, immatV: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Distance (km)</label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g., 12.5"
-                    value={createFormData.distanceTour}
-                    onChange={(e) => setCreateFormData({ ...createFormData, distanceTour: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                     required
-                  />
+                  >
+                    <option value="">Select a vehicle</option>
+                    {vehicles.filter(v => v.stateV === "operational").map((vehicle) => (
+                      <option key={vehicle.immatV} value={vehicle.immatV}>
+                        {vehicle.immatV} - {vehicle.typeV} ({vehicle.capacityV}kg)
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Estimated Time</label>
-                  <Input
-                    placeholder="e.g., 02:30"
-                    value={createFormData.estimedTimeTour}
-                    onChange={(e) => setCreateFormData({ ...createFormData, estimedTimeTour: e.target.value })}
-                    required
-                  />
+                  <label className="text-sm font-medium text-foreground">
+                    Agents <span className="text-destructive">*</span> (Select at least one)
+                  </label>
+                  <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                    {agents.filter(a => a.disponibility).length === 0 ? (
+                      <p className="text-sm text-foreground/60">No available agents</p>
+                    ) : (
+                      agents.filter(a => a.disponibility).map((agent) => (
+                        <div key={agent.idUser} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`create-agent-${agent.idUser}`}
+                            checked={createFormData.agentIds.includes(agent.idUser)}
+                            onCheckedChange={() => toggleAgentSelection(agent.idUser, true)}
+                          />
+                          <label
+                            htmlFor={`create-agent-${agent.idUser}`}
+                            className="text-sm cursor-pointer flex-1"
+                          >
+                            {agent.nameU} - {agent.roleAgent} ({agent.idUser})
+                          </label>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <p className="text-xs text-foreground/60">
+                    {createFormData.agentIds.length} agent(s) selected
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Distance (km)</label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      placeholder="e.g., 12.5"
+                      value={createFormData.distanceTour}
+                      onChange={(e) => setCreateFormData({ ...createFormData, distanceTour: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Estimated Time</label>
+                    <Input
+                      placeholder="e.g., 02:30"
+                      value={createFormData.estimedTimeTour}
+                      onChange={(e) => setCreateFormData({ ...createFormData, estimedTimeTour: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={submitting}>
                   {submitting ? "Creating..." : "Create Tour"}
@@ -303,7 +450,7 @@ export default function ToursPage() {
 
       {/* Edit Tour Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Tour</DialogTitle>
             <DialogDescription>Update tour details for {editFormData.idTour}</DialogDescription>
@@ -336,14 +483,57 @@ export default function ToursPage() {
                 <option value="completed">Completed</option>
               </select>
             </div>
+            
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Vehicle ID</label>
-              <Input
-                placeholder="e.g., VEH-001"
+              <label className="text-sm font-medium text-foreground">
+                Vehicle <span className="text-destructive">*</span>
+              </label>
+              <select
                 value={editFormData.immatV}
                 onChange={(e) => setEditFormData({ ...editFormData, immatV: e.target.value })}
-              />
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+                required
+              >
+                <option value="">Select a vehicle</option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.immatV} value={vehicle.immatV}>
+                    {vehicle.immatV} - {vehicle.typeV} ({vehicle.capacityV}kg) - {vehicle.stateV}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Agents <span className="text-destructive">*</span> (Select at least one)
+              </label>
+              <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                {agents.length === 0 ? (
+                  <p className="text-sm text-foreground/60">No agents available</p>
+                ) : (
+                  agents.map((agent) => (
+                    <div key={agent.idUser} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`edit-agent-${agent.idUser}`}
+                        checked={editFormData.agentIds.includes(agent.idUser)}
+                        onCheckedChange={() => toggleAgentSelection(agent.idUser, false)}
+                      />
+                      <label
+                        htmlFor={`edit-agent-${agent.idUser}`}
+                        className="text-sm cursor-pointer flex-1"
+                      >
+                        {agent.nameU} - {agent.roleAgent} ({agent.idUser}) 
+                        {agent.disponibility ? " - Available" : " - Unavailable"}
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-foreground/60">
+                {editFormData.agentIds.length} agent(s) selected
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Distance (km)</label>
@@ -424,23 +614,82 @@ export default function ToursPage() {
       ) : (
         /* Tours List */
         <div className="space-y-3">
-          {tours.map((tour) => (
-            <Card key={tour.idTour}>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground">
-                        Tour {tour.immatV}
-                      </h3>
-                      <span className="text-xs bg-muted px-2 py-1 rounded">{tour.dateTour}</span>
+          {tours.map((tour) => {
+            const vehicle = getVehicleDetails(tour.immatV)
+            const tourAgents = getTourAgents(tour)
+
+            return (
+              <Card key={tour.idTour}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground">
+                          Tour {tour.idTour}
+                        </h3>
+                        <span className="text-xs bg-muted px-2 py-1 rounded">{tour.dateTour}</span>
+                      </div>
+                      
+                      {/* Vehicle Info */}
+                      <div className="flex items-center gap-2 text-sm bg-muted/50 px-3 py-2 rounded-lg">
+                        <Truck className="w-4 h-4 text-primary" />
+                        <span className="font-medium">Vehicle:</span>
+                        {vehicle ? (
+                          <span>
+                            {vehicle.immatV} - {vehicle.typeV} ({vehicle.capacityV}kg, {vehicle.stateV})
+                          </span>
+                        ) : (
+                          <span className="text-destructive">{tour.immatV || "Unassigned"}</span>
+                        )}
+                      </div>
+
+                      {/* Agents Info */}
+                      <div className="flex items-start gap-2 text-sm bg-muted/50 px-3 py-2 rounded-lg">
+                        <UserCheck className="w-4 h-4 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-medium">Agents:</span>
+                          {tourAgents.length > 0 ? (
+                            <div className="mt-1 space-y-1">
+                              {tourAgents.map((agent) => (
+                                <div key={agent.idUser} className="text-xs">
+                                  {agent.nameU} - {agent.roleAgent} ({agent.idUser})
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-destructive ml-1">No agents assigned</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4 text-sm text-foreground/60">
+                        <div>Distance: {tour.distanceTour} km</div>
+                        <div>Duration: {tour.estimedTimeTour}</div>
+                        <div>Collected: {tour.collectedQuantityTour} kg</div>
+                        <div>CO2 Emission: {tour.CO2emissionTour} kg</div>
+                      </div>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm text-foreground/60">
-                      <div>Vehicle: {tour.immatV || "Unassigned"}</div>
-                      <div>Distance: {tour.distanceTour} km</div>
-                      <div>Duration: {tour.estimedTimeTour}</div>
-                      <div>Collected: {tour.collectedQuantityTour} kg</div>
-                      <div>CO2 Emission: {tour.CO2emissionTour} kg</div>
+                    <div className="flex flex-col gap-2 items-end">
+                      <StatusBadge
+                        status={getStatusBadgeType(tour.statusTour)}
+                        label={tour.statusTour.charAt(0).toUpperCase() + tour.statusTour.slice(1).replace("-", " ")}
+                      />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => openEditDialog(tour)}
+                        title="Edit tour"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleDeleteTour(tour.idTour)}
+                        title="Delete tour"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 items-end">
