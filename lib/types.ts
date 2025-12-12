@@ -175,9 +175,15 @@ export interface CollectTourInput {
   estimedTimeTour?: string
   collectedQuantityTour?: number
   CO2emissionTour?: number
-  agentIds?: string[]
+  agentIds?: string[]  // Array of agent IDs (required: at least 1)
   collectionPointIds?: string[]
-  immatV?: string
+  immatV?: string  // Vehicle ID (required)
+  idClAgents?: {  // Used for internal XML representation
+    idClAgent: string | string[]
+  }
+  idCPs?: {  // Used for internal XML representation
+    idCP: string | string[]
+  }
 }
 
 export interface IncidentReportInput {
